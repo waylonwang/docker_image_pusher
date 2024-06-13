@@ -8,20 +8,20 @@
 #--platform=linux/arm64 xiaoyaliu/alist
 
 # homepage
-ghcr.io/gethomepage/homepage:latest
+#ghcr.io/gethomepage/homepage:latest
 
 # fastgpt
-ghcr.io/labring/fastgpt:latest
+#ghcr.io/labring/fastgpt:latest
 
 # fastgpt
-ghcr.io/labring/fastgpt:latest
+#ghcr.io/labring/fastgpt:latest
 
 # portainer
-portainer/agent:2.19.4
-portainer/portainer-ce:2.19.4-alpine
+#portainer/agent:2.19.4
+#portainer/portainer-ce:2.19.4-alpine
 
 # authelia
-authelia/authelia:4.38.8
+#authelia/authelia:4.38.8
 
 # rancher
 rancher/rancher:v2.6.6-rc1
