@@ -23,5 +23,5 @@ portainer/portainer-ce:2.19.4-alpine
 # authelia
 authelia/authelia:4.38.8
 
-
-# add new
+# rancher
+rancher/rancher:v2.6.6-rc1
