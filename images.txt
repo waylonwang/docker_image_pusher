@@ -14,5 +14,6 @@ ghcr.io/labring/fastgpt:latest
 # fastgpt
 ghcr.io/labring/fastgpt:latest
 
-# portainer-agent
+# portainer
 portainer/agent:2.19.4
+portainer/portainer-ce:2.19.4-alpine
