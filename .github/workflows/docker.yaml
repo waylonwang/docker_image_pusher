@@ -55,7 +55,7 @@ jobs:
             else
                 temp_map[$image_name]=$name_space
             fi       
-        done < images.txt
+        done < images.conf
         
         while IFS= read -r line; do
             [[ -z "$line" ]] && continue
@@ -92,4 +92,4 @@ jobs:
            
             echo "Pushing image $new_image"
             docker push "$new_image"
-        done < images.txt    
+        done < images.conf    
