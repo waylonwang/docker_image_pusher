@@ -10,3 +10,9 @@ ghcr.io/gethomepage/homepage:latest
 
 # fastgpt
 ghcr.io/labring/fastgpt:latest
+
+# fastgpt
+ghcr.io/labring/fastgpt:latest
+
+# portainer-agent
+portainer/agent:2.19.4
