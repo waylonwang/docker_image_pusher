@@ -24,8 +24,6 @@ jobs:
 
     - name: Build and push image Aliyun
       run: |
-        set -euxo pipefail
-
         echo "Logging in to Aliyun Docker registry"
         docker login -u $ALIYUN_REGISTRY_USER -p $ALIYUN_REGISTRY_PASSWORD $ALIYUN_REGISTRY
 
