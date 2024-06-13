@@ -17,3 +17,6 @@ ghcr.io/labring/fastgpt:latest
 # portainer
 portainer/agent:2.19.4
 portainer/portainer-ce:2.19.4-alpine
+
+# authelia
+authelia/authelia:4.38.8
