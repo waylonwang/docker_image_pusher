@@ -56,7 +56,13 @@ jobs:
             echo "Target Image: $target_image"
 
             # 使用 Docker Registry V2 API 判断镜像是否存在
-            response=$(curl -s -o /dev/null -w "%{http_code}" -u $MY_REGISTRY_USER:$MY_REGISTRY_PASSWORD "$MY_REGISTRY/v2/$namespace/$repo/manifests/$tag")
+            if [ -z "$namespace" ]; then
+              manifest_url="https://$MY_REGISTRY/v2/$repo/manifests/$tag"
+            else
+              manifest_url="https://$MY_REGISTRY/v2/$namespace/$repo/manifests/$tag"
+            fi
+
+            response=$(curl -s -o /dev/null -w "%{http_code}" -u $MY_REGISTRY_USER:$MY_REGISTRY_PASSWORD "$manifest_url")
             
             if [ "$response" -eq 200 ]; then
                 echo "Image $target_image already exists in $MY_REGISTRY."
