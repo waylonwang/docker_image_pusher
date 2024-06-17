@@ -6,10 +6,11 @@ on:
     branches: [ main ]
 
 env:
-  ALIYUN_REGISTRY: "${{ secrets.ALIYUN_REGISTRY }}"
-  ALIYUN_NAME_SPACE: "${{ secrets.ALIYUN_NAME_SPACE }}"
-  ALIYUN_REGISTRY_USER: "${{ secrets.ALIYUN_REGISTRY_USER }}"
-  ALIYUN_REGISTRY_PASSWORD: "${{ secrets.ALIYUN_REGISTRY_PASSWORD }}"
+  MY_REGISTRY: "${{ secrets.MY_REGISTRY }}"
+  MY_NAME_SPACE: "${{ secrets.MY_NAME_SPACE }}"
+  MY_REGISTRY_USER: "${{ secrets.MY_REGISTRY_USER }}"
+  MY_REGISTRY_PASSWORD: "${{ secrets.MY_REGISTRY_PASSWORD }}"
+
 
 jobs:
   build:
@@ -24,7 +25,7 @@ jobs:
 
     - name: Build and push image Aliyun
       run: |
-        docker login -u $ALIYUN_REGISTRY_USER -p $ALIYUN_REGISTRY_PASSWORD $ALIYUN_REGISTRY
+        docker login -u $MY_REGISTRY_USER -p $MY_REGISTRY_PASSWORD $MY_REGISTRY
         
         # 数据预处理,判断镜像是否重名
         declare -A duplicate_images
@@ -107,7 +108,8 @@ jobs:
             
             # 将 @sha256: 等字符删除
             image_name_tag="${image_name_tag%%@*}"
-            new_image="$ALIYUN_REGISTRY/$ALIYUN_NAME_SPACE/$platform_prefix$name_space_prefix$image_name_tag"
+            new_image="$MY_REGISTRY/$platform_prefix$name_space_prefix$image_name_tag"
+            # new_image="$MY_REGISTRY/$MY_NAME_SPACE/$platform_prefix$name_space_prefix$image_name_tag"
             echo "Docker tag $image $new_image"
             docker tag $image $new_image
             echo "Docker push $new_image"
