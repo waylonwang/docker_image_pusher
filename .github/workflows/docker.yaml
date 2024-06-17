@@ -6,7 +6,7 @@ on:
     branches: [ main ]
 
 env:
-  MY_REGISTRY: "${{ vars.MY_REGISTRY }}"
+  MY_REGISTRY: "${{ secrets.MY_REGISTRY }}"
   MY_REGISTRY_USER: "${{ secrets.MY_REGISTRY_USER }}"
   MY_REGISTRY_PASSWORD: "${{ secrets.MY_REGISTRY_PASSWORD }}"
 
