@@ -1,0 +1,89 @@
+name: Swarm  # 工作流程的名称
+
+on:
+  workflow_dispatch:  # 手动触发
+  push:
+    branches: [ main ]  # 当推送到 main 分支时触发
+
+env:
+  MY_REGISTRY: "${{ secrets.MY_REGISTRY }}"  # 镜像仓库地址
+  MY_REGISTRY_USER: "${{ secrets.MY_REGISTRY_USER }}"  # 镜像仓库用户名
+  MY_REGISTRY_PASSWORD: "${{ secrets.MY_REGISTRY_PASSWORD }}"  # 镜像仓库密码
+
+jobs:
+  build:
+    name: Pull Repos and Push Images  # 任务名称
+    runs-on: ubuntu-latest  # 使用最新的 Ubuntu 运行器
+    steps:
+    - name: Docker Setup Buildx
+      uses: docker/setup-buildx-action@v3  # 设置 Docker Buildx
+
+    - name: Checkout Code
+      uses: actions/checkout@v4  # 检出代码仓库
+
+    - name: Loop through repos
+      run: |
+        images=()  # 初始化镜像数组
+        
+        # 读取 repos.conf 文件的每一行
+        while IFS= read -r repo || [ -n "$repo" ]; do
+            echo "Cloning repo: $repo"
+            git clone "$repo" repo_clone  # 克隆仓库
+            if [ -f "repo_clone/docker-compose.yml" ]; then  # 检查是否存在 docker-compose.yml 文件
+                echo "Found docker-compose.yml in $repo"
+                while IFS= read -r line || [ -n "$line" ]; do
+                    # 查找注释中的 image-ref 键
+                    if [[ "$line" =~ ^\#image\-ref:\ (.*) ]]; then
+                        image_ref="${BASH_REMATCH[1]}"
+                        image_ref=$(echo "$image_ref" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')  # 去除前后空格
+                        images+=("$image_ref")  # 将 image-ref 的值添加到镜像数组中
+                    fi
+                done < repo_clone/docker-compose.yml
+            fi
+            rm -rf repo_clone  # 删除克隆的仓库文件夹
+        done < repos.conf  # 读取 repos.conf 文件
+
+        for image in "${images[@]}"; do
+            echo "Processing image: $image"
+            
+            # 解析镜像名称中的各个部分
+            registry=$(echo "$image" | awk -F'/' '{print $1}')
+            repository_with_tag=$(echo "$image" | awk -F'/' '{print $NF}')
+            namespace_and_repo=$(echo "$image" | awk -F'/' '{if (NF==3) print $2"/"$3; else if (NF==2) print $1"/"$2; else print ""}')
+            
+            namespace=$(echo "$namespace_and_repo" | awk -F'/' '{print $1}')
+            repo=$(echo "$repository_with_tag" | awk -F':' '{print $1}')
+            tag=$(echo "$repository_with_tag" | awk -F':' '{if (NF>1) print $2; else print "latest"}')
+
+            echo "Parsed Registry: $registry"
+            echo "Parsed Namespace: $namespace"
+            echo "Parsed Repository: $repo"
+            echo "Parsed Tag: $tag"
+            
+            target_image="$MY_REGISTRY/$namespace/$repo:$tag"  # 目标镜像地址
+            echo "Target Image: $target_image"
+
+            # 使用 Docker Registry V2 API 判断镜像是否存在
+            if [ -z "$namespace" ]; then
+              manifest_url="https://$MY_REGISTRY/v2/$repo/manifests/$tag"
+            else
+              manifest_url="https://$MY_REGISTRY/v2/$namespace/$repo/manifests/$tag"
+            fi
+
+            response=$(curl -s -o /dev/null -w "%{http_code}" -u $MY_REGISTRY_USER:$MY_REGISTRY_PASSWORD "$manifest_url")
+            
+            if [ "$response" -eq 200 ]; then
+                echo "Image $target_image already exists in $MY_REGISTRY."
+                continue  # 如果镜像已经存在，跳过该镜像
+            else
+                echo "Image $target_image does not exist in $MY_REGISTRY, proceeding to pull and push."
+            fi
+            
+            echo "Docker pull $image"
+            docker pull $image  # 拉取源镜像
+            
+            echo "Docker tag $image $target_image"
+            docker tag $image $target_image  # 给镜像打标签
+            
+            echo "Docker push $target_image"
+            docker push $target_image  # 推送镜像到目标仓库
