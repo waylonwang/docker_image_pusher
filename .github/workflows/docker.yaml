@@ -23,7 +23,7 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Build and push image Aliyun
+    - name: Build and push image to MY_REGISTRY
       run: |
         docker login -u $MY_REGISTRY_USER -p $MY_REGISTRY_PASSWORD $MY_REGISTRY
         
@@ -99,12 +99,12 @@ jobs:
         
             name_space_prefix=""
             # 如果镜像名重名
-            if [[ -n "${duplicate_images[$image_name]}" ]]; then
-                # 如果命名空间非空，将命名空间加到前缀
-                if [[ -n "$name_space" ]]; then
-                    name_space_prefix="${name_space}_"
-                fi
-            fi
+            # if [[ -n "${duplicate_images[$image_name]}" ]]; then
+            #     # 如果命名空间非空，将命名空间加到前缀
+            #     if [[ -n "$name_space" ]]; then
+                    name_space_prefix="${name_space}/"
+            #     fi
+            # fi
             
             # 将 @sha256: 等字符删除
             image_name_tag="${image_name_tag%%@*}"
