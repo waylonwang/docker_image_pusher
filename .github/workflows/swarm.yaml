@@ -2,6 +2,7 @@ name: Swarm  # 工作流程的名称
 
 on:
   workflow_dispatch:  # 手动触发
+    types: [stack-deploied]
   push:
     branches: [ main ]  # 当推送到 main 分支时触发
 
