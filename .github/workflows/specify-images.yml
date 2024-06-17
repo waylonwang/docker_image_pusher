@@ -55,7 +55,11 @@ jobs:
             target_image="$MY_REGISTRY/$namespace/$repo:$tag"
             echo "Target Image: $target_image"
 
-            # 使用 Docker Registry V2 API 判断镜像是否存在
+            # 获取源镜像的 SHA 值
+            source_digest=$(docker inspect --format='{{index .RepoDigests 0}}' "$image" | awk -F'@' '{print $2}')
+            echo "Source Image Digest: $source_digest"
+
+            # 使用 Docker Registry V2 API 判断镜像是否存在以及 SHA 值是否匹配
             if [ -z "$namespace" ]; then
               manifest_url="https://$MY_REGISTRY/v2/$repo/manifests/$tag"
             else
@@ -65,12 +69,17 @@ jobs:
             response=$(curl -s -o /dev/null -w "%{http_code}" -u $MY_REGISTRY_USER:$MY_REGISTRY_PASSWORD "$manifest_url")
             
             if [ "$response" -eq 200 ]; then
-                echo "Image $target_image already exists in $MY_REGISTRY."
-                continue
+                target_digest=$(curl -s -u $MY_REGISTRY_USER:$MY_REGISTRY_PASSWORD "$manifest_url" | jq -r '.config.digest')
+                if [ "$source_digest" == "$target_digest" ]; then
+                    echo "Image $target_image already exists in $MY_REGISTRY with matching digest."
+                    continue  # 如果镜像已经存在且 SHA 匹配，跳过该镜像
+                else
+                    echo "Image $target_image exists but digests do not match. Proceeding to pull and push."
+                fi
             else
                 echo "Image $target_image does not exist in $MY_REGISTRY, proceeding to pull and push."
             fi
-            
+
             echo "Docker pull $image"
             docker pull $image
             
