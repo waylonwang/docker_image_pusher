@@ -43,6 +43,7 @@ jobs:
             rm -rf repo_clone  # 删除克隆的仓库文件夹
         done < repos.conf  # 读取 repos.conf 文件
 
+        # 处理镜像数组中的每一个镜像
         for image in "${images[@]}"; do
             echo "Processing image: $image"
             
@@ -87,3 +88,4 @@ jobs:
             
             echo "Docker push $target_image"
             docker push $target_image  # 推送镜像到目标仓库
+        done
