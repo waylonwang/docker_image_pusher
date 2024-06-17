@@ -1,4 +1,4 @@
-name: Swarm  # 工作流程的名称
+name: Stacks Deploy  # 工作流程的名称
 
 on:
   repository_dispatch: # API触发
@@ -23,7 +23,7 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4  # 检出代码仓库
 
-    - name: Loop through repos
+    - name: Read Stacks repo, build, and push images to the target registry
       run: |
         images=()  # 初始化镜像数组
         

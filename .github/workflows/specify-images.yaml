@@ -1,4 +1,4 @@
-name: Docker
+name: Specify Images
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Build and push image to MY_REGISTRY
+    - name: Read configuration, build, and push images to the target registry
       run: |
         docker login -u $MY_REGISTRY_USER -p $MY_REGISTRY_PASSWORD $MY_REGISTRY
         
