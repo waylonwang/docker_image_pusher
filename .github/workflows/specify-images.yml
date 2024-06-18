@@ -57,7 +57,7 @@ jobs:
 
             # 获取源镜像的Digest值
             source_manifest_url="https://$registry/v2/$namespace/$repo/manifests/$tag"
-            source_digest=$(curl -s -u $MY_REGISTRY_USER:$MY_REGISTRY_PASSWORD "$source_manifest_url" | jq -r '.config.digest')
+            source_digest=$(curl -s "$source_manifest_url" | jq -r '.config.digest')
             echo "Source Image Digest: $source_digest"
 
             # 使用 Docker Registry V2 API 判断镜像是否存在以及Digest值是否匹配
