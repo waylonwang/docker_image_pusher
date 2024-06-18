@@ -31,6 +31,7 @@ jobs:
         docker login -u $MY_REGISTRY_USER -p $MY_REGISTRY_PASSWORD $MY_REGISTRY
         
         while IFS= read -r line || [ -n "$line" ]; do
+            echo "----------------------------------------------------"
             echo "读取行: $line"
             # 忽略空行与注释
             [[ -z "$line" ]] && continue
@@ -66,14 +67,14 @@ jobs:
 
             if [ "$source_arch" == "null" ]; then
                 # 多架构镜像，提取 linux/amd64 架构的 digest
-                echo "镜像 $image 是多架构镜像。正在提取 linux/amd64 架构。"
+                echo "源镜像 $image 是多架构镜像。正在提取 linux/amd64 架构。"
                 amd64_digest=$(echo "$source_manifest" | jq -r '.ManifestList[] | select(.platform.architecture == "amd64" and .platform.os == "linux") | .digest')
                 echo "amd64_digest: $amd64_digest"
 
                 source_layers=$(skopeo inspect docker://$image@$amd64_digest | jq -r '.Layers[]' | tr '\n' ' ')
             else
                 # 单架构镜像，直接获取 layers
-                echo "镜像 $image 是单架构镜像。"
+                echo "源镜像 $image 是单架构镜像。"
                 source_layers=$(echo "$source_manifest" | jq -r '.Layers[]' | tr '\n' ' ')
             fi
 
@@ -124,7 +125,7 @@ jobs:
                 fi
             fi
 
-            echo "镜像 $target_image 不存在于 $MY_REGISTRY 或者各层不匹配，继续拉取和推送。"
+            echo "目标镜像 $target_image 不存在于 $MY_REGISTRY 或者各层不匹配，继续拉取和推送。"
             
             echo "Docker 拉取 $image"
             docker pull $image
