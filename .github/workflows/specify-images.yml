@@ -115,7 +115,7 @@ jobs:
                 echo "${target_layers:0:50}...${target_layers: -50}"
             else
                 echo "${target_layers:0:50}...${target_layers:$((${#target_layers}/2-25)):50}...${target_layers: -50}"
-            }
+            fi
 
             if [ -n "$target_layers" ]; then
                 if [ "$source_layers" == "$target_layers" ]; then
