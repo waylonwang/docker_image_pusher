@@ -79,12 +79,24 @@ jobs:
                 # 多架构镜像，提取 linux/amd64 架构的 digest
                 echo "镜像 $image 是多架构镜像。正在提取 linux/amd64 架构。"
                 amd64_digest=$(echo "$source_manifest" | jq -r '.ManifestList[] | select(.platform.architecture == "amd64" and .platform.os == "linux") | .digest')
+                echo "amd64_digest: $amd64_digest"
+
                 source_layers=$(skopeo inspect docker://$image@$amd64_digest | jq -r '.Layers[]' | tr '\n' ' ')
             else
                 # 单架构镜像，直接获取 layers
                 echo "镜像 $image 是单架构镜像。"
                 source_layers=$(echo "$source_manifest" | jq -r '.Layers[]' | tr '\n' ' ')
             fi
+
+            # 输出 source_layers 的内容
+            echo "源镜像 $image 的 layers:"
+            if [ ${#source_layers} -le 100 ]; then
+                echo "$source_layers"
+            elif [ ${#source_layers} -le 200 ]; then
+                echo "${source_layers:0:50}...${source_layers: -50}"
+            else
+                echo "${source_layers:0:50}...${source_layers:$((${#source_layers}/2-25)):50}...${source_layers: -50}"
+            }
 
             # 获取目标镜像的 manifest 并判断是否为多架构镜像
             target_manifest=$(skopeo inspect --creds $MY_REGISTRY_USER:$MY_REGISTRY_PASSWORD docker://$target_image || echo "")
@@ -94,6 +106,8 @@ jobs:
                     # 多架构镜像，提取 linux/amd64 架构的 digest
                     echo "目标镜像 $target_image 是多架构镜像。正在提取 linux/amd64 架构。"
                     target_amd64_digest=$(echo "$target_manifest" | jq -r '.ManifestList[] | select(.platform.architecture == "amd64" and .platform.os == "linux") | .digest')
+                    echo "目标镜像 amd64_digest: $target_amd64_digest"
+
                     target_layers=$(skopeo inspect --creds $MY_REGISTRY_USER:$MY_REGISTRY_PASSWORD docker://$target_image@$target_amd64_digest | jq -r '.Layers[]' | tr '\n' ' ')
                 else
                     # 单架构镜像，直接获取 layers
@@ -103,6 +117,16 @@ jobs:
             else
                 target_layers=""
             fi
+
+            # 输出 target_layers 的内容
+            echo "目标镜像 $target_image 的 layers:"
+            if [ ${#target_layers} -le 100 ]; then
+                echo "$target_layers"
+            elif [ ${#target_layers} -le 200 ]; then
+                echo "${target_layers:0:50}...${target_layers: -50}"
+            else
+                echo "${target_layers:0:50}...${target_layers:$((${#target_layers}/2-25)):50}...${target_layers: -50}"
+            }
 
             if [ -n "$target_layers" ]; then
                 if [ "$source_layers" == "$target_layers" ]; then

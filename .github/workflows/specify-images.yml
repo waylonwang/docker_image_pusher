@@ -15,6 +15,11 @@ jobs:
     name: Pull
     runs-on: ubuntu-latest
     steps:
+    - name: Install skopeo and jq
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y skopeo jq    
+
     - name: Docker Setup Buildx
       uses: docker/setup-buildx-action@v3
 
@@ -26,7 +31,7 @@ jobs:
         docker login -u $MY_REGISTRY_USER -p $MY_REGISTRY_PASSWORD $MY_REGISTRY
         
         while IFS= read -r line || [ -n "$line" ]; do
-            echo "Reading line: $line"
+            echo "读取行: $line"
             # 忽略空行与注释
             [[ -z "$line" ]] && continue
             if echo "$line" | grep -q '^\s*#'; then
@@ -35,7 +40,7 @@ jobs:
             
             # 获取镜像的完整名称，例如 kasmweb/nginx:1.25.3（命名空间/镜像名:版本号）
             image=$(echo "$line" | awk '{print $NF}')
-            echo "Original Image: $image"
+            echo "原始镜像: $image"
 
             # 拆分出 registry, namespace, repository, tag
             registry=$(echo "$image" | awk -F'/' '{print $1}')
@@ -46,47 +51,87 @@ jobs:
             repo=$(echo "$repository_with_tag" | awk -F':' '{print $1}')
             tag=$(echo "$repository_with_tag" | awk -F':' '{if (NF>1) print $2; else print "latest"}')
 
-            echo "Parsed Registry: $registry"
-            echo "Parsed Namespace: $namespace"
-            echo "Parsed Repository: $repo"
-            echo "Parsed Tag: $tag"
+            echo "解析出的注册表: $registry"
+            echo "解析出的命名空间: $namespace"
+            echo "解析出的仓库: $repo"
+            echo "解析出的标签: $tag"
             
             # 目标地址
             target_image="$MY_REGISTRY/$namespace/$repo:$tag"
-            echo "Target Image: $target_image"
+            echo "目标镜像: $target_image"
 
-            # 获取源镜像的Digest值
-            source_manifest_url="https://$registry/v2/$namespace/$repo/manifests/$tag"
-            source_digest=$(curl -s "$source_manifest_url" | jq -r '.config.digest')
-            echo "Source Image Digest: $source_digest"
+            # 获取源镜像的 manifest 并判断是否为多架构镜像
+            source_manifest=$(skopeo inspect docker://$image)
+            source_arch=$(echo "$source_manifest" | jq -r '.Architecture')
 
-            # 使用 Docker Registry V2 API 判断镜像是否存在以及Digest值是否匹配
-            if [ -z "$namespace" ]; then
-              manifest_url="https://$MY_REGISTRY/v2/$repo/manifests/$tag"
+            if [ "$source_arch" == "null" ]; then
+                # 多架构镜像，提取 linux/amd64 架构的 digest
+                echo "镜像 $image 是多架构镜像。正在提取 linux/amd64 架构。"
+                amd64_digest=$(echo "$source_manifest" | jq -r '.ManifestList[] | select(.platform.architecture == "amd64" and .platform.os == "linux") | .digest')
+                echo "amd64_digest: $amd64_digest"
+
+                source_layers=$(skopeo inspect docker://$image@$amd64_digest | jq -r '.Layers[]' | tr '\n' ' ')
             else
-              manifest_url="https://$MY_REGISTRY/v2/$namespace/$repo/manifests/$tag"
+                # 单架构镜像，直接获取 layers
+                echo "镜像 $image 是单架构镜像。"
+                source_layers=$(echo "$source_manifest" | jq -r '.Layers[]' | tr '\n' ' ')
             fi
 
-            response=$(curl -s -o /dev/null -w "%{http_code}" -u $MY_REGISTRY_USER:$MY_REGISTRY_PASSWORD "$manifest_url")
-            
-            if [ "$response" -eq 200 ]; then
-                target_digest=$(curl -s -u $MY_REGISTRY_USER:$MY_REGISTRY_PASSWORD "$manifest_url" | jq -r '.config.digest')
-                if [ "$source_digest" == "$target_digest" ]; then
-                    echo "Image $target_image already exists in $MY_REGISTRY with matching digest."
-                    continue  # 如果镜像已经存在且Digest匹配，跳过该镜像
+            # 输出 source_layers 的内容
+            echo "源镜像 $image 的 layers:"
+            if [ ${#source_layers} -le 100 ]; then
+                echo "$source_layers"
+            elif [ ${#source_layers} -le 200 ]; then
+                echo "${source_layers:0:50}...${source_layers: -50}"
+            else
+                echo "${source_layers:0:50}...${source_layers:$((${#source_layers}/2-25)):50}...${source_layers: -50}"
+            }
+
+            # 获取目标镜像的 manifest 并判断是否为多架构镜像
+            target_manifest=$(skopeo inspect --creds $MY_REGISTRY_USER:$MY_REGISTRY_PASSWORD docker://$target_image || echo "")
+            if [ -n "$target_manifest" ]; then
+                target_arch=$(echo "$target_manifest" | jq -r '.Architecture')
+                if [ "$target_arch" == "null" ]; then
+                    # 多架构镜像，提取 linux/amd64 架构的 digest
+                    echo "目标镜像 $target_image 是多架构镜像。正在提取 linux/amd64 架构。"
+                    target_amd64_digest=$(echo "$target_manifest" | jq -r '.ManifestList[] | select(.platform.architecture == "amd64" and .platform.os == "linux") | .digest')
+                    echo "目标镜像 amd64_digest: $target_amd64_digest"
+
+                    target_layers=$(skopeo inspect --creds $MY_REGISTRY_USER:$MY_REGISTRY_PASSWORD docker://$target_image@$target_amd64_digest | jq -r '.Layers[]' | tr '\n' ' ')
                 else
-                    echo "Image $target_image exists but digests do not match. Proceeding to pull and push."
+                    # 单架构镜像，直接获取 layers
+                    echo "目标镜像 $target_image 是单架构镜像。"
+                    target_layers=$(echo "$target_manifest" | jq -r '.Layers[]' | tr '\n' ' ')
                 fi
             else
-                echo "Image $target_image does not exist in $MY_REGISTRY, proceeding to pull and push."
+                target_layers=""
             fi
 
-            echo "Docker pull $image"
+            # 输出 target_layers 的内容
+            echo "目标镜像 $target_image 的 layers:"
+            if [ ${#target_layers} -le 100 ]; then
+                echo "$target_layers"
+            elif [ ${#target_layers} -le 200 ]; then
+                echo "${target_layers:0:50}...${target_layers: -50}"
+            else
+                echo "${target_layers:0:50}...${target_layers:$((${#target_layers}/2-25)):50}...${target_layers: -50}"
+            }
+
+            if [ -n "$target_layers" ]; then
+                if [ "$source_layers" == "$target_layers" ]; then
+                    echo "镜像 $target_image 已经存在于 $MY_REGISTRY 且各层一致。"
+                    continue  # 如果镜像已经存在并且各层一致，跳过该镜像
+                fi
+            fi
+
+            echo "镜像 $target_image 不存在于 $MY_REGISTRY 或者各层不匹配，继续拉取和推送。"
+            
+            echo "Docker 拉取 $image"
             docker pull $image
             
-            echo "Docker tag $image $target_image"
+            echo "Docker 打标签 $image 为 $target_image"
             docker tag $image $target_image
             
-            echo "Docker push $target_image"
+            echo "Docker 推送 $target_image"
             docker push $target_image
         done < images.conf
