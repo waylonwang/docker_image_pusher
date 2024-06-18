@@ -14,7 +14,7 @@ env:
 
 jobs:
   build:
-    name: Pull Repos and Push Images  # 任务名称
+    name: Pull Repos and Push Images 
     runs-on: ubuntu-latest  # 使用最新的 Ubuntu 运行器
     steps:
     - name: Install skopeo and jq
@@ -22,8 +22,10 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y skopeo jq
 
+    - name: Checkout Code
+      uses: actions/checkout@v4  # 检出代码仓库
+
     - name: Read settings.yml
-      id: read_settings
       run: |
         enable_stacks_deploy=$(jq -r '.["stacks-deploy"].enable' settings.yml)
         if [ "$enable_stacks_deploy" != "true" ]; then
@@ -39,10 +41,6 @@ jobs:
     - name: Docker Setup Buildx
       if: env.enable_stacks_deploy == 'true'
       uses: docker/setup-buildx-action@v3  # 设置 Docker Buildx
-
-    - name: Checkout Code
-      if: env.enable_stacks_deploy == 'true'
-      uses: actions/checkout@v4  # 检出代码仓库
 
     - name: Read Stacks repo, build, and push images to the target registry
       if: env.enable_stacks_deploy == 'true'
