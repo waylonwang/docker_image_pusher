@@ -1,0 +1,30 @@
+stacks-deploy:
+  enable: true
+  repos:
+    - https://github.com/waylonwang/swarm-stack-application.git
+    - https://github.com/waylonwang/swarm-stack-ai.git
+    - https://github.com/waylonwang/swarm-stack-automation.git
+    - https://github.com/waylonwang/swarm-stack-business.git
+    - https://github.com/waylonwang/swarm-stack-resource.git
+    - https://github.com/waylonwang/swarm-stack-terminal.git
+    - https://github.com/waylonwang/swarm-stack-media.git
+    - https://github.com/waylonwang/swarm-stack-metrics.git
+    - https://github.com/waylonwang/swarm-stack-database.git
+    - https://github.com/waylonwang/swarm-stack-development.git
+    - https://github.com/waylonwang/swarm-stack-storage.git
+    - https://github.com/waylonwang/swarm-stack-public.git
+    - https://github.com/waylonwang/swarm-stack-base.git
+
+specify-images:
+  enable: true
+  images:
+    # rancher
+    # - rancher/rancher:v2.6.6-rc1
+    # - rancher/os:v1.5.8
+    # - rancher/rancher:v2.5.17
+    # - rancher/rancher:v2.4.18
+    # - rancher/rancher:v2.3.11
+    # - rancher/rancher-agent:v2.4.18
+    - rancher/rancher:v2.8.4
+    # - rancher/rancher-agent:v2.8.4
+    # - rancher/mirrored-pause:3.6

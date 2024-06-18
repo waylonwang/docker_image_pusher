@@ -22,58 +22,71 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y skopeo jq
 
+    - name: Read settings.yml
+      id: read_settings
+      run: |
+        enable_stacks_deploy=$(jq -r '.["stacks-deploy"].enable' settings.yml)
+        if [ "$enable_stacks_deploy" != "true" ]; then
+          echo "stacks-deploy未启用，跳过后续步骤。"
+          echo "enable_stacks_deploy=false" >> $GITHUB_ENV
+        else
+          echo "enable_stacks_deploy=true" >> $GITHUB_ENV
+          repos=$(jq -r '.["stacks-deploy"].repos[] | select(test("^[^#]"))' settings.yml)
+          repos_array=($repos)
+          echo "repos=$(IFS=,; echo "${repos_array[*]}")" >> $GITHUB_ENV
+        fi
+
     - name: Docker Setup Buildx
+      if: env.enable_stacks_deploy == 'true'
       uses: docker/setup-buildx-action@v3  # 设置 Docker Buildx
 
     - name: Checkout Code
+      if: env.enable_stacks_deploy == 'true'
       uses: actions/checkout@v4  # 检出代码仓库
 
     - name: Read Stacks repo, build, and push images to the target registry
+      if: env.enable_stacks_deploy == 'true'
       run: |
-        images>()  # 初始化镜像数组
-        updated_count>0  # 初始化更新镜像计数
+        images=()  # 初始化镜像数组
+        updated_count=0  # 初始化更新镜像计数
+        IFS=',' read -r -a repos <<< "$repos"  # 读取环境变量中的仓库数组
 
         echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 
-        # 读取 repos.conf 文件的每一行
-        while IFS> read -r repo || [ -n "$repo" ]; do
+        # 处理仓库数组中的每一个仓库
+        for repo in "${repos[@]}"; do
             echo "----------------------------------------------------"
-            echo "读取行: $repo"
-            # 忽略空行与注释
-            [[ -z "$repo" ]] && continue
-            if echo "$repo" | grep -q '^\s*#'; then
-                continue
-            fi
-
+            echo "处理仓库: $repo"
+            
             echo "正在克隆仓库: $repo"
             git clone "$repo" repo_clone  # 克隆仓库
             if [ -f "repo_clone/docker-compose.yml" ]; then  # 检查是否存在 docker-compose.yml 文件
                 echo "在 $repo 中找到 docker-compose.yml"
-                while IFS> read -r line || [ -n "$line" ]; do
+                while IFS= read -r line || [ -n "$line" ]; do
                     # 查找注释中的 image-ref 键
-                    if [[ "$line" >~ \#[[:space:]]*image\-ref[[:space:]]*:[[:space:]]*(.*) ]]; then
-                        image_ref>"${BASH_REMATCH[1]}"
-                        image_ref>$(echo "$image_ref" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')  # 去除前后空格
-                        images+>("$image_ref")  # 将 image-ref 的值添加到镜像数组中
+                    if [[ "$line" =~ \#[[:space:]]*image\-ref[[:space:]]*:[[:space:]]*(.*) ]]; then
+                        image_ref="${BASH_REMATCH[1]}"
+                        image_ref=$(echo "$image_ref" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')  # 去除前后空格
+                        images+=("$image_ref")  # 将 image-ref 的值添加到镜像数组中
                     fi
                 done < repo_clone/docker-compose.yml
             fi
             rm -rf repo_clone  # 删除克隆的仓库文件夹
-        done < repos.conf  # 读取 repos.conf 文件
+        done
 
         # 处理镜像数组中的每一个镜像
         for image in "${images[@]}"; do
-            echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+            echo "============================================================================="
             echo "处理镜像: $image"
             
             # 解析镜像名称中的各个部分
-            registry>$(echo "$image" | awk -F'/' '{print $1}')
-            repository_with_tag>$(echo "$image" | awk -F'/' '{print $NF}')
-            namespace_and_repo>$(echo "$image" | awk -F'/' '{if (NF>>3) print $2"/"$3; else if (NF>>2) print $1"/"$2; else print ""}')
+            registry=$(echo "$image" | awk -F'/' '{print $1}')
+            repository_with_tag=$(echo "$image" | awk -F'/' '{print $NF}')
+            namespace_and_repo=$(echo "$image" | awk -F'/' '{if (NF>3) print $2"/"$3; else if (NF>2) print $1"/"$2; else print ""}')
             
-            namespace>$(echo "$namespace_and_repo" | awk -F'/' '{print $1}')
-            repo>$(echo "$repository_with_tag" | awk -F':' '{print $1}')
-            tag>$(echo "$repository_with_tag" | awk -F':' '{if (NF>1) print $2; else print "latest"}')
+            namespace=$(echo "$namespace_and_repo" | awk -F'/' '{print $1}')
+            repo=$(echo "$repository_with_tag" | awk -F':' '{print $1}')
+            tag=$(echo "$repository_with_tag" | awk -F':' '{if (NF>1) print $2; else print "latest"}')
 
             echo "解析出的注册表: $registry"
             echo "解析出的命名空间: $namespace"
@@ -81,13 +94,13 @@ jobs:
             echo "解析出的标签: $tag"
             echo "----------------------------------------------------"
             
-            target_image>"$MY_REGISTRY/$namespace/$repo:$tag"  # 目标镜像地址
+            target_image="$MY_REGISTRY/$namespace/$repo:$tag"  # 目标镜像地址
             echo "目标镜像: $target_image"
             echo "----------------------------------------------------"
 
             # 获取源镜像的 manifest
-            source_manifest>$(skopeo inspect docker://$image)
-            source_layers>$(echo "$source_manifest" | jq -r '.Layers[]' | sed -n '2,$p' | tr '\n' ' ')
+            source_manifest=$(skopeo inspect docker://$image)
+            source_layers=$(echo "$source_manifest" | jq -r '.Layers[]' | sed -n '2,$p' | tr '\n' ' ')
             
             # 输出 source_layers 的内容
             echo "源镜像 $image 的 layers（忽略首层后）:"
@@ -100,11 +113,11 @@ jobs:
             fi
 
             # 获取目标镜像的 manifest
-            target_manifest>$(skopeo inspect --creds $MY_REGISTRY_USER:$MY_REGISTRY_PASSWORD docker://$target_image || echo "")
+            target_manifest=$(skopeo inspect --creds $MY_REGISTRY_USER:$MY_REGISTRY_PASSWORD docker://$target_image || echo "")
             if [ -n "$target_manifest" ]; then
-                target_layers>$(echo "$target_manifest" | jq -r '.Layers[]' | sed -n '2,$p' | tr '\n' ' ')
+                target_layers=$(echo "$target_manifest" | jq -r '.Layers[]' | sed -n '2,$p' | tr '\n' ' ')
             else
-                target_layers>""
+                target_layers=""
             fi
 
             # 输出 target_layers 的内容
@@ -119,7 +132,7 @@ jobs:
             echo "----------------------------------------------------"
 
             if [ -n "$target_layers" ]; then
-                if [ "$source_layers" >> "$target_layers" ]; then
+                if [ "$source_layers" == "$target_layers" ]; then
                     echo "镜像 $target_image 已经存在于 $MY_REGISTRY 且各层一致。"
                     continue  # 如果镜像已经存在并且各层一致，跳过该镜像
                 fi
@@ -138,7 +151,7 @@ jobs:
             echo "Docker 推送 $target_image"
             docker push $target_image  # 推送镜像到目标仓库
             
-            updated_count>$((updated_count + 1))  # 增加更新镜像计数
+            updated_count=$((updated_count + 1))  # 增加更新镜像计数
         done
         
         echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
