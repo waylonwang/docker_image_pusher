@@ -17,25 +17,32 @@ jobs:
     name: Pull Repos and Push Images 
     runs-on: ubuntu-latest  # 使用最新的 Ubuntu 运行器
     steps:
-    - name: Install skopeo and jq
-      run: |
+    - name: Install skopeo, jq, and yq
+      run: | 
         sudo apt-get update
         sudo apt-get install -y skopeo jq
+        sudo wget https://github.com/mikefarah/yq/releases/download/v4.18.0/yq_linux_amd64 -O /usr/bin/yq
+        sudo chmod +x /usr/bin/yq
 
     - name: Checkout Code
       uses: actions/checkout@v4  # 检出代码仓库
 
     - name: Read setting.yml
       run: |
-        enable_stacks_deploy=$(jq -r '.["stacks-deploy"].enable' setting.yml)
-        if [ "$enable_stacks_deploy" != "true" ]; then
-          echo "stacks-deploy未启用，跳过后续步骤。"
-          echo "enable_stacks_deploy=false" >> $GITHUB_ENV
+        SETTINGS_FILE="setting.yml"
+        if [ -f "$SETTINGS_FILE" ]; then
+          enable_stacks_deploy=$(yq e '.["stacks-deploy"].enable' "$SETTINGS_FILE")
+          if [ "$enable_stacks_deploy" != "true" ]; then
+            echo "stacks-deploy未启用，跳过后续步骤。"
+            echo "enable_stacks_deploy=false" >> $GITHUB_ENV
+          else
+            echo "enable_stacks_deploy=true" >> $GITHUB_ENV
+            repos=$(yq e '.["stacks-deploy"].repos | join(",")' "$SETTINGS_FILE")
+            echo "repos=$repos" >> $GITHUB_ENV
+          fi
         else
-          echo "enable_stacks_deploy=true" >> $GITHUB_ENV
-          repos=$(jq -r '.["stacks-deploy"].repos[] | select(test("^[^#]"))' setting.yml)
-          repos_array=($repos)
-          echo "repos=$(IFS=,; echo "${repos_array[*]}")" >> $GITHUB_ENV
+          echo "未找到 settings.yml 文件，跳过后续步骤。"
+          echo "enable_stacks_deploy=false" >> $GITHUB_ENV
         fi
 
     - name: Docker Setup Buildx
