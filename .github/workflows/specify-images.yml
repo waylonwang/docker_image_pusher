@@ -30,6 +30,9 @@ jobs:
       run: |
         docker login -u $MY_REGISTRY_USER -p $MY_REGISTRY_PASSWORD $MY_REGISTRY
         
+        updated_count=0  # 初始化更新镜像计数
+        total_count=0    # 初始化处理镜像总数
+        
         while IFS= read -r line || [ -n "$line" ]; do
             echo "============================================================================="
             echo "读取行: $line"
@@ -42,6 +45,8 @@ jobs:
             # 获取镜像的完整名称，例如 kasmweb/nginx:1.25.3（命名空间/镜像名:版本号）
             image=$(echo "$line" | awk '{print $NF}')
             echo "原始镜像: $image"
+            
+            total_count=$((total_count + 1))  # 增加处理镜像总数
 
             # 拆分出 registry, namespace, repository, tag
             registry=$(echo "$image" | awk -F'/' '{print $1}')
@@ -115,4 +120,10 @@ jobs:
             
             echo "Docker 推送 $target_image"
             docker push $target_image
+            
+            updated_count=$((updated_count + 1))  # 增加更新镜像计数
         done < images.conf
+        
+        echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        echo "总共处理了 $total_count 个镜像"
+        echo "总共有 $updated_count 个镜像进行了更新"
