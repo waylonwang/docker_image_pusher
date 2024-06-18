@@ -85,7 +85,7 @@ jobs:
                 echo "${source_layers:0:50}...${source_layers: -50}"
             else
                 echo "${source_layers:0:50}...${source_layers:$((${#source_layers}/2-25)):50}...${source_layers: -50}"
-            }
+            fi
 
             # 获取目标镜像的 manifest 并判断是否为多架构镜像
             target_manifest=$(skopeo inspect --creds $MY_REGISTRY_USER:$MY_REGISTRY_PASSWORD docker://$target_image || echo "")
