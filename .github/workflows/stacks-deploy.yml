@@ -21,7 +21,7 @@ jobs:
       run: | 
         sudo apt-get update
         sudo apt-get install -y skopeo jq
-        sudo wget https://github.com/mikefarah/yq/releases/download/v4.18.0/yq_linux_amd64 -O /usr/bin/yq
+        sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq
         sudo chmod +x /usr/bin/yq
 
     - name: Checkout Code
