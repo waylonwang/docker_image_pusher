@@ -52,7 +52,6 @@ jobs:
       run: |
         docker login -u $MY_REGISTRY_USER -p $MY_REGISTRY_PASSWORD $MY_REGISTRY
       
-        images=()  # 初始化镜像数组
         updated_count=0  # 初始化更新镜像计数
         IFS=',' read -r -a images <<< "$images"  # 读取环境变量中的仓库数组
 
