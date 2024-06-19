@@ -29,27 +29,27 @@ jobs:
       run: |
         SETTINGS_FILE="setting.yml"
         if [ -f "$SETTINGS_FILE" ]; then
-          enable_specify-images=$(yq e '.["specify-images"].enable' "$SETTINGS_FILE")
-          if [ "$enable_specify-images" != "true" ]; then
+          enable_specify_images=$(yq e '.["specify-images"].enable' "$SETTINGS_FILE")
+          if [ "$enable_specify_images" != "true" ]; then
             echo "stacks-deploy未启用，跳过后续步骤。"
-            echo "enable_specify-images=false" >> $GITHUB_ENV
+            echo "enable_specify_images=false" >> $GITHUB_ENV
           else
-            echo "enable_specify-images=true" >> $GITHUB_ENV
+            echo "enable_specify_images=true" >> $GITHUB_ENV
             images=$(yq e '.["stacks-deploy"].images | join(",")' "$SETTINGS_FILE")
             echo "images=$images" >> $GITHUB_ENV
             echo "读取到的images内容: ${images_array[*]}"
           fi
         else
           echo "未找到 settings.yml 文件，跳过后续步骤。"
-          echo "enable_specify-images=false" >> $GITHUB_ENV
+          echo "enable_specify_images=false" >> $GITHUB_ENV
         fi
 
     - name: Docker Setup Buildx
-      if: env.enable_specify-images == 'true'
+      if: env.enable_specify_images == 'true'
       uses: docker/setup-buildx-action@v3  # 设置 Docker Buildx
 
     - name: Read Stacks repo, build, and push images to the target registry
-      if: env.enable_specify-images == 'true'
+      if: env.enable_specify_images == 'true'
       run: |
         docker login -u $MY_REGISTRY_USER -p $MY_REGISTRY_PASSWORD $MY_REGISTRY
       
