@@ -1,0 +1,142 @@
+name: Specify Images  # 指定镜像
+
+on:
+  workflow_dispatch:  # 手动触发
+  push:
+    branches: [ main ]  # 当推送到 main 分支时触发
+
+env:
+  MY_REGISTRY: "${{ secrets.MY_REGISTRY }}"  # 镜像仓库地址
+  MY_REGISTRY_USER: "${{ secrets.MY_REGISTRY_USER }}"  # 镜像仓库用户名
+  MY_REGISTRY_PASSWORD: "${{ secrets.MY_REGISTRY_PASSWORD }}"  # 镜像仓库密码
+
+jobs:
+  build:
+    name: Pull images and Push Images 
+    runs-on: ubuntu-latest  # 使用最新的 Ubuntu 运行器
+    steps:
+    - name: Install skopeo, jq, and yq
+      run: | 
+        sudo apt-get update
+        sudo apt-get install -y skopeo jq
+        sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq
+        sudo chmod +x /usr/bin/yq
+
+    - name: Checkout Code
+      uses: actions/checkout@v4  # 检出代码仓库
+
+    - name: Read setting.yml
+      run: |
+        SETTINGS_FILE="setting.yml"
+        if [ -f "$SETTINGS_FILE" ]; then
+          enable_specify-images=$(yq e '.["specify-images"].enable' "$SETTINGS_FILE")
+          if [ "$enable_specify-images" != "true" ]; then
+            echo "stacks-deploy未启用，跳过后续步骤。"
+            echo "enable_specify-images=false" >> $GITHUB_ENV
+          else
+            echo "enable_specify-images=true" >> $GITHUB_ENV
+            images=$(yq e '.["stacks-deploy"].images | join(",")' "$SETTINGS_FILE")
+            echo "images=$images" >> $GITHUB_ENV
+            echo "读取到的images内容: ${images_array[*]}"
+          fi
+        else
+          echo "未找到 settings.yml 文件，跳过后续步骤。"
+          echo "enable_specify-images=false" >> $GITHUB_ENV
+        fi
+
+    - name: Docker Setup Buildx
+      if: env.enable_specify-images == 'true'
+      uses: docker/setup-buildx-action@v3  # 设置 Docker Buildx
+
+    - name: Read Stacks repo, build, and push images to the target registry
+      if: env.enable_specify-images == 'true'
+      run: |
+        docker login -u $MY_REGISTRY_USER -p $MY_REGISTRY_PASSWORD $MY_REGISTRY
+      
+        images=()  # 初始化镜像数组
+        updated_count=0  # 初始化更新镜像计数
+        IFS=',' read -r -a images <<< "$images"  # 读取环境变量中的仓库数组
+
+        # 处理镜像数组中的每一个镜像
+        for image in "${images[@]}"; do
+            echo "============================================================================="
+            echo "处理镜像: $image"
+            
+            # 解析镜像名称中的各个部分
+            registry=$(echo "$image" | awk -F'/' '{print $1}')
+            imagesitory_with_tag=$(echo "$image" | awk -F'/' '{print $NF}')
+            namespace_and_repo=$(echo "$image" | awk -F'/' '{if (NF==3) print $2"/"$3; else if (NF==2) print $1"/"$2; else print ""}')
+      
+            namespace=$(echo "$namespace_and_repo" | awk -F'/' '{print $1}')
+            repo=$(echo "$imagesitory_with_tag" | awk -F':' '{print $1}')
+            tag=$(echo "$imagesitory_with_tag" | awk -F':' '{if (NF>1) print $2; else print "latest"}')
+      
+            echo "解析出的注册表: $registry"
+            echo "解析出的命名空间: $namespace"
+            echo "解析出的仓库: $repo"
+            echo "解析出的标签: $tag"
+            echo "----------------------------------------------------"
+            
+            target_image="$MY_REGISTRY/$namespace/$repo:$tag"  # 目标镜像地址
+            echo "目标镜像: $target_image"
+            echo "----------------------------------------------------"
+
+            # 获取源镜像的 manifest
+            source_manifest=$(skopeo inspect docker://$image)
+            source_layers=$(echo "$source_manifest" | jq -r '.Layers[]' | sed -n '2,$p' | tr '\n' ' ')
+            
+            # 输出 source_layers 的内容
+            echo "源镜像 $image 的 layers（忽略首层后）:"
+            if [ ${#source_layers} -le 100 ]; then
+                echo "$source_layers"
+            elif [ ${#source_layers} -le 200 ]; then
+                echo "${source_layers:0:50}...${source_layers: -50}"
+            else
+                echo "${source_layers:0:50}...${source_layers:$((${#source_layers}/2-25)):50}...${source_layers: -50}"
+            fi
+
+            # 获取目标镜像的 manifest
+            target_manifest=$(skopeo inspect --creds $MY_REGISTRY_USER:$MY_REGISTRY_PASSWORD docker://$target_image || echo "")
+            if [ -n "$target_manifest" ]; then
+                target_layers=$(echo "$target_manifest" | jq -r '.Layers[]' | sed -n '2,$p' | tr '\n' ' ')
+            else
+                target_layers=""
+            fi
+
+            # 输出 target_layers 的内容
+            echo "目标镜像 $target_image 的 layers（忽略首层后）:"
+            if [ ${#target_layers} -le 100 ]; then
+                echo "$target_layers"
+            elif [ ${#target_layers} -le 200 ]; then
+                echo "${target_layers:0:50}...${target_layers: -50}"
+            else
+                echo "${target_layers:0:50}...${target_layers:$((${#target_layers}/2-25)):50}...${target_layers: -50}"
+            fi
+            echo "----------------------------------------------------"
+
+            if [ -n "$target_layers" ]; then
+                if [ "$source_layers" == "$target_layers" ]; then
+                    echo "镜像 $target_image 已经存在于 $MY_REGISTRY 且各层一致。"
+                    continue  # 如果镜像已经存在并且各层一致，跳过该镜像
+                fi
+            fi
+
+            echo "目标镜像 $target_image 不存在于 $MY_REGISTRY 或者各层不匹配，继续拉取和推送。"
+            echo "----------------------------------------------------"
+            
+            echo "Docker 拉取 $image"
+            docker pull $image  # 拉取源镜像
+            
+            echo "Docker 打标签 $image 为 $target_image"
+            docker tag $image $target_image  # 给镜像打标签
+            echo "----------------------------------------------------"
+            
+            echo "Docker 推送 $target_image"
+            docker push $target_image  # 推送镜像到目标仓库
+            
+            updated_count=$((updated_count + 1))  # 增加更新镜像计数
+        done
+        
+        echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        echo "总共处理了 ${#images[@]} 个镜像"
+        echo "总共更新了 $updated_count 个镜像"
