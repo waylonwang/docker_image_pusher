@@ -31,13 +31,12 @@ jobs:
         if [ -f "$SETTINGS_FILE" ]; then
           enable_specify_images=$(yq e '.["specify-images"].enable' "$SETTINGS_FILE")
           if [ "$enable_specify_images" != "true" ]; then
-            echo "stacks-deploy未启用，跳过后续步骤。"
+            echo "specify-images未启用，跳过后续步骤。"
             echo "enable_specify_images=false" >> $GITHUB_ENV
           else
             echo "enable_specify_images=true" >> $GITHUB_ENV
-            images=$(yq e '.["stacks-deploy"].images | join(",")' "$SETTINGS_FILE")
+            images=$(yq e '.["specify-images"].images | join(",")' "$SETTINGS_FILE")
             echo "images=$images" >> $GITHUB_ENV
-            echo "读取到的images内容: ${images_array[*]}"
           fi
         else
           echo "未找到 settings.yml 文件，跳过后续步骤。"

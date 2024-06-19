@@ -39,7 +39,6 @@ jobs:
             echo "enable_stacks_deploy=true" >> $GITHUB_ENV
             repos=$(yq e '.["stacks-deploy"].repos | join(",")' "$SETTINGS_FILE")
             echo "repos=$repos" >> $GITHUB_ENV
-            echo "读取到的repos内容: ${repos_array[*]}"
           fi
         else
           echo "未找到 settings.yml 文件，跳过后续步骤。"
