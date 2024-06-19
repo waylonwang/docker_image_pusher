@@ -39,6 +39,7 @@ jobs:
             echo "enable_stacks_deploy=true" >> $GITHUB_ENV
             repos=$(yq e '.["stacks-deploy"].repos | join(",")' "$SETTINGS_FILE")
             echo "repos=$repos" >> $GITHUB_ENV
+            echo "读取到的repos内容: ${repos_array[*]}"
           fi
         else
           echo "未找到 settings.yml 文件，跳过后续步骤。"
@@ -87,12 +88,12 @@ jobs:
             # 解析镜像名称中的各个部分
             registry=$(echo "$image" | awk -F'/' '{print $1}')
             repository_with_tag=$(echo "$image" | awk -F'/' '{print $NF}')
-            namespace_and_repo=$(echo "$image" | awk -F'/' '{if (NF>3) print $2"/"$3; else if (NF>2) print $1"/"$2; else print ""}')
-            
+            namespace_and_repo=$(echo "$image" | awk -F'/' '{if (NF==3) print $2"/"$3; else if (NF==2) print $1"/"$2; else print ""}')
+      
             namespace=$(echo "$namespace_and_repo" | awk -F'/' '{print $1}')
             repo=$(echo "$repository_with_tag" | awk -F':' '{print $1}')
             tag=$(echo "$repository_with_tag" | awk -F':' '{if (NF>1) print $2; else print "latest"}')
-
+      
             echo "解析出的注册表: $registry"
             echo "解析出的命名空间: $namespace"
             echo "解析出的仓库: $repo"
