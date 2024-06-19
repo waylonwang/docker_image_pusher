@@ -1,5 +1,5 @@
 stacks-deploy:
-  enable: false
+  enable: true
   repos:
     - https://github.com/waylonwang/swarm-stack-application.git
     - https://github.com/waylonwang/swarm-stack-ai.git
