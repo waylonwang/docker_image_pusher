@@ -16,7 +16,7 @@ stacks-deploy:
     - https://github.com/waylonwang/swarm-stack-base.git
 
 specify-images:
-  enable: true
+  enable: false
   images:
     # rancher
     # - rancher/rancher:v2.6.6-rc1
@@ -30,3 +30,8 @@ specify-images:
     # - rancher/mirrored-pause:3.6
     - crowdsecurity/crowdsec:v1.6.2
     - library/busybox:latest
+
+build-images:
+  enable: true
+  builders:
+    - fluentd-es-syslog:latest

@@ -47,7 +47,7 @@ jobs:
       if: env.enable_specify_images == 'true'
       uses: docker/setup-buildx-action@v3  # 设置 Docker Buildx
 
-    - name: Read Stacks repo, build, and push images to the target registry
+    - name: Read Images list, build, and push images to the target registry
       if: env.enable_specify_images == 'true'
       run: |
         docker login -u $MY_REGISTRY_USER -p $MY_REGISTRY_PASSWORD $MY_REGISTRY
