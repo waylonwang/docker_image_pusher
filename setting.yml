@@ -29,3 +29,4 @@ specify-images:
     # - rancher/rancher-agent:v2.8.4
     # - rancher/mirrored-pause:3.6
     - crowdsecurity/crowdsec:v1.6.2
+    - library/busybox:latest
