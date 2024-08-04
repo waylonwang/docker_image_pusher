@@ -16,7 +16,7 @@ stacks-deploy:
     - https://github.com/waylonwang/swarm-stack-base.git
 
 specify-images:
-  enable: false
+  enable: true
   images:
     # rancher
     # - rancher/rancher:v2.6.6-rc1
@@ -33,6 +33,6 @@ specify-images:
     - lazyteam/lazydocker:latest
 
 build-images:
-  enable: true
+  enable: false
   builders:
     - fluentd-es-syslog:latest
