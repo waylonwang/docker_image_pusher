@@ -33,7 +33,7 @@ specify-images:
     - lazyteam/lazydocker:latest
     - skanehira/docui:latest
     - moncho/dry:latest
-    - icecrime/docker-mon:latest
+    # - icecrime/docker-mon:latest
     - lirantal/dockly:latest
 
 build-images:
