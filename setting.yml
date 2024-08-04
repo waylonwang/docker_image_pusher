@@ -25,11 +25,12 @@ specify-images:
     # - rancher/rancher:v2.4.18
     # - rancher/rancher:v2.3.11
     # - rancher/rancher-agent:v2.4.18
-    - rancher/rancher:v2.8.4
+    # - rancher/rancher:v2.8.4
     # - rancher/rancher-agent:v2.8.4
     # - rancher/mirrored-pause:3.6
-    - crowdsecurity/crowdsec:v1.6.2
-    - library/busybox:latest
+    # - crowdsecurity/crowdsec:v1.6.2
+    # - library/busybox:latest
+    - lazyteam/lazydocker:latest
 
 build-images:
   enable: true
