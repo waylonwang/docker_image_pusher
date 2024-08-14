@@ -30,11 +30,12 @@ specify-images:
     # - rancher/mirrored-pause:3.6
     # - crowdsecurity/crowdsec:v1.6.2
     # - library/busybox:latest
-    - lazyteam/lazydocker:latest
-    - skanehira/docui:latest
-    - moncho/dry:latest
+    # - lazyteam/lazydocker:latest
+    # - skanehira/docui:latest
+    # - moncho/dry:latest
     # - icecrime/docker-mon:latest
-    - lirantal/dockly:latest
+    # - lirantal/dockly:latest
+    - ghcr.io/open-webui/open-webui:git-9682806-ollama
 
 build-images:
   enable: false
