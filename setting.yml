@@ -36,7 +36,12 @@ specify-images:
     # - icecrime/docker-mon:latest
     # - lirantal/dockly:latest
     # - ghcr.io/open-webui/open-webui:git-9682806-ollama
-    - ghcr.io/open-webui/open-webui:main
+    # - ghcr.io/open-webui/open-webui:main
+    - oaooa/pichome:2.1.0
+    - langgenius/dify-api:0.7.1
+    - langgenius/dify-web:0.7.1
+    - langgenius/dify-sandbox:0.2.6
+    - ubuntu/squid:6.6-24.04_beta
 
 build-images:
   enable: false
