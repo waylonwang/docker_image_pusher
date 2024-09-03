@@ -37,11 +37,12 @@ specify-images:
     # - lirantal/dockly:latest
     # - ghcr.io/open-webui/open-webui:git-9682806-ollama
     # - ghcr.io/open-webui/open-webui:main
-    - oaooa/pichome:2.1.0
-    - langgenius/dify-api:0.7.1
-    - langgenius/dify-web:0.7.1
-    - langgenius/dify-sandbox:0.2.6
-    - ubuntu/squid:6.6-24.04_beta
+    # - oaooa/pichome:2.1.0
+    # - langgenius/dify-api:0.7.1
+    # - langgenius/dify-web:0.7.1
+    # - langgenius/dify-sandbox:0.2.6
+    # - ubuntu/squid:6.6-24.04_beta
+    - ghcr.io/labring/fastgpt:4.8.10-alpha2
 
 build-images:
   enable: false
