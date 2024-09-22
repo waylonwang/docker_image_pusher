@@ -42,7 +42,8 @@ specify-images:
     # - langgenius/dify-web:0.7.1
     # - langgenius/dify-sandbox:0.2.6
     # - ubuntu/squid:6.6-24.04_beta
-    - ghcr.io/labring/fastgpt:4.8.9
+    # - ghcr.io/labring/fastgpt:4.8.9
+    - library/nginx:1.27.1-alpine
 
 build-images:
   enable: false
