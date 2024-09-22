@@ -1,22 +1,22 @@
 stacks-deploy:
-  enable: false
+  enable: true
   repos:
-    - https://github.com/waylonwang/swarm-stack-application.git
-    - https://github.com/waylonwang/swarm-stack-ai.git
-    - https://github.com/waylonwang/swarm-stack-automation.git
-    - https://github.com/waylonwang/swarm-stack-business.git
-    - https://github.com/waylonwang/swarm-stack-resource.git
-    - https://github.com/waylonwang/swarm-stack-terminal.git
-    - https://github.com/waylonwang/swarm-stack-media.git
-    - https://github.com/waylonwang/swarm-stack-metrics.git
-    - https://github.com/waylonwang/swarm-stack-database.git
-    - https://github.com/waylonwang/swarm-stack-development.git
+    # - https://github.com/waylonwang/swarm-stack-application.git
+    # - https://github.com/waylonwang/swarm-stack-ai.git
+    # - https://github.com/waylonwang/swarm-stack-automation.git
+    # - https://github.com/waylonwang/swarm-stack-business.git
+    # - https://github.com/waylonwang/swarm-stack-resource.git
+    # - https://github.com/waylonwang/swarm-stack-terminal.git
+    # - https://github.com/waylonwang/swarm-stack-media.git
+    # - https://github.com/waylonwang/swarm-stack-metrics.git
+    # - https://github.com/waylonwang/swarm-stack-database.git
+    # - https://github.com/waylonwang/swarm-stack-development.git
     - https://github.com/waylonwang/swarm-stack-storage.git
-    - https://github.com/waylonwang/swarm-stack-public.git
-    - https://github.com/waylonwang/swarm-stack-base.git
+    # - https://github.com/waylonwang/swarm-stack-public.git
+    # - https://github.com/waylonwang/swarm-stack-base.git
 
 specify-images:
-  enable: true
+  enable: false
   images:
     # rancher
     # - rancher/rancher:v2.6.6-rc1
@@ -43,7 +43,7 @@ specify-images:
     # - langgenius/dify-sandbox:0.2.6
     # - ubuntu/squid:6.6-24.04_beta
     # - ghcr.io/labring/fastgpt:4.8.9
-    - library/nginx:1.27.1-alpine
+    # - library/nginx:1.27.1-alpine
 
 build-images:
   enable: false
