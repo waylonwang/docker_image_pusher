@@ -44,7 +44,8 @@ specify-images:
     # - ubuntu/squid:6.6-24.04_beta
     # ！- ghcr.io/labring/fastgpt:4.8.9
     # - library/nginx:1.27.1-alpine
-    - flowiseai/flowise:2.1.1
+    # - flowiseai/flowise:2.1.1
+    - justsong/one-api:v0.6.8
 
 build-images:
   enable: false
