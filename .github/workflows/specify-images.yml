@@ -9,8 +9,8 @@ env:
   MY_REGISTRY: "${{ secrets.MY_REGISTRY }}"  # 镜像仓库地址
   MY_REGISTRY_USER: "${{ secrets.MY_REGISTRY_USER }}"  # 镜像仓库用户名
   MY_REGISTRY_PASSWORD: "${{ secrets.MY_REGISTRY_PASSWORD }}"  # 镜像仓库密码
-  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }} # DockerHub用户名
-  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }} # DockerHub Token
+  DOCKERHUB_USERNAME: "${{ secrets.DOCKERHUB_USERNAME }}" # DockerHub用户名
+  DOCKERHUB_TOKEN: "${{ secrets.DOCKERHUB_TOKEN }}" # DockerHub Token
 
 jobs:
   build:
