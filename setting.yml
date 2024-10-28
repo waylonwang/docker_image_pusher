@@ -43,10 +43,11 @@ specify-images:
     # - langgenius/dify-sandbox:0.2.6
     # - ubuntu/squid:6.6-24.04_beta
     # - ghcr.io/labring/fastgpt:v4.6.8
-    - ghcr.io/labring/fastgpt-sandbox:v4.8.10
+    # - ghcr.io/labring/fastgpt-sandbox:v4.8.10
     # - library/nginx:1.27.1-alpine
     # - flowiseai/flowise:2.1.1
     # - justsong/one-api:v0.6.8
+    herberthe0229/iptv-sources:latest
 
 build-images:
   enable: false
