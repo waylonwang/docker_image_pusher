@@ -47,9 +47,9 @@ specify-images:
     # - library/nginx:1.27.1-alpine
     # - flowiseai/flowise:2.1.1
     # - justsong/one-api:v0.6.8
-    # - herberthe0229/iptv-sources:latest
+    - herberthe0229/iptv-sources:latest
     # - nocobase/nocobase:1.3.46-beta
-    - docker.1panel.live/whyour/qinglong:latest
+    # - docker.1panel.live/whyour/qinglong:latest
 
 build-images:
   enable: false
