@@ -2,7 +2,8 @@ stacks-deploy:
   enable: false
   repos:
     - https://github.com/waylonwang/swarm-stack-application.git
-    - https://github.com/waylonwang/swarm-stack-ai.git
+    - https://github.com/waylonwang/swarm-stack-ai.m1.git
+    - https://github.com/waylonwang/swarm-stack-ai.m2.git    
     - https://github.com/waylonwang/swarm-stack-automation.git
     - https://github.com/waylonwang/swarm-stack-business.git
     - https://github.com/waylonwang/swarm-stack-resource.git
@@ -16,7 +17,7 @@ stacks-deploy:
     - https://github.com/waylonwang/swarm-stack-base.git
 
 specify-images:
-  enable: false
+  enable: true
   images:
     # rancher
     # - rancher/rancher:v2.6.6-rc1
@@ -50,13 +51,15 @@ specify-images:
     # - herberthe0229/iptv-sources:latest
     # - nocobase/nocobase:1.3.46-beta
     # - docker.1panel.live/whyour/qinglong:latest
-    # - langgenius/dify-api:0.15.2
-    # - langgenius/dify-web:0.15.2
+    - langgenius/dify-api:0.10.0
+    - langgenius/dify-web:0.10.0
+    - langgenius/dify-api:0.15.3
+    - langgenius/dify-web:0.15.3
     # - langgenius/dify-sandbox:0.2.10
-    - chiavegatto/postgres-pgagent:14.1
+    # - chiavegatto/postgres-pgagent:14.1
 
 build-images:
-  enable: true
+  enable: false
   builders:
     # - fluentd-es-syslog:latest
     - pgagent:4.2.3
