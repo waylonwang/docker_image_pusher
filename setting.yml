@@ -16,7 +16,7 @@ stacks-deploy:
     - https://github.com/waylonwang/swarm-stack-base.git
 
 specify-images:
-  enable: true
+  enable: false
   images:
     # rancher
     # - rancher/rancher:v2.6.6-rc1
@@ -54,8 +54,9 @@ specify-images:
     # - langgenius/dify-web:0.15.2
     # - langgenius/dify-sandbox:0.2.10
     - chiavegatto/postgres-pgagent:14.1
-    
+
 build-images:
-  enable: false
+  enable: true
   builders:
-    - fluentd-es-syslog:latest
+    # - fluentd-es-syslog:latest
+    - pgagent:4.2.3
