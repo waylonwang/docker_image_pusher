@@ -50,10 +50,11 @@ specify-images:
     # - herberthe0229/iptv-sources:latest
     # - nocobase/nocobase:1.3.46-beta
     # - docker.1panel.live/whyour/qinglong:latest
-    - langgenius/dify-api:0.15.2
-    - langgenius/dify-web:0.15.2
-    - langgenius/dify-sandbox:0.2.10
-
+    # - langgenius/dify-api:0.15.2
+    # - langgenius/dify-web:0.15.2
+    # - langgenius/dify-sandbox:0.2.10
+    - chiavegatto/postgres-pgagent:14.1
+    
 build-images:
   enable: false
   builders:
