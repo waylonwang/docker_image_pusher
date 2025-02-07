@@ -61,5 +61,5 @@ specify-images:
 build-images:
   enable: false
   builders:
-    # - fluentd-es-syslog:latest
-    - pgagent:4.2.3
+    - fluentd-es-syslog:latest
+    # - pgagent:4.2.3
