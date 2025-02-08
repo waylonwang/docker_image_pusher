@@ -57,7 +57,8 @@ specify-images:
     # - langgenius/dify-web:0.15.3
     # - langgenius/dify-sandbox:0.2.10
     # - chiavegatto/postgres-pgagent:14.1
-    - mongoclient/mongoclient:4.0.1
+    # - mongoclient/mongoclient:4.0.1
+    - dbeaver/cloudbeaver-ce:24.3.4
 
 build-images:
   enable: false
