@@ -58,7 +58,8 @@ specify-images:
     # - langgenius/dify-sandbox:0.2.10
     # - chiavegatto/postgres-pgagent:14.1
     # - mongoclient/mongoclient:4.0.1
-    - dbeaver/cloudbeaver:24.3.4
+    # - dbeaver/cloudbeaver:24.3.4
+    - wagoodman/dive:v0.12
 
 build-images:
   enable: false
