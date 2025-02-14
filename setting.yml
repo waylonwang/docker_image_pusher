@@ -59,7 +59,8 @@ specify-images:
     # - chiavegatto/postgres-pgagent:14.1
     # - mongoclient/mongoclient:4.0.1
     # - dbeaver/cloudbeaver:24.3.4
-    - wagoodman/dive:v0.12
+    # - wagoodman/dive:v0.12
+    - wojiushixiaobai/dataease:v2.10.5
 
 build-images:
   enable: false
