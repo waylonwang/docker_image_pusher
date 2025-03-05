@@ -60,7 +60,10 @@ specify-images:
     # - mongoclient/mongoclient:4.0.1
     # - dbeaver/cloudbeaver:24.3.4
     # - wagoodman/dive:v0.12
-    - wojiushixiaobai/dataease:v2.10.5
+    # - wojiushixiaobai/dataease:v2.10.5
+    - langgenius/dify-api:1.0.0
+    - langgenius/dify-web:1.0.0
+    - langgenius/dify-plugin-daemon:0.0.3-local
 
 build-images:
   enable: false
