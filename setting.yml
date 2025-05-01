@@ -37,7 +37,7 @@ specify-images:
     # - icecrime/docker-mon:latest
     # - lirantal/dockly:latest
     # - ghcr.io/open-webui/open-webui:git-9682806-ollama
-    # - ghcr.io/open-webui/open-webui:main
+    - ghcr.io/open-webui/open-webui:main
     # - oaooa/pichome:2.1.0
     # - langgenius/dify-api:0.7.1
     # - langgenius/dify-web:0.7.1
@@ -65,9 +65,9 @@ specify-images:
     # - langgenius/dify-web:1.0.0
     # - langgenius/dify-plugin-daemon:0.0.3-local
     # - ghcr.io/regclient/regctl:v0.5.0
-    - langgenius/dify-api:1.1.2
-    - langgenius/dify-web:1.1.2
-    - langgenius/dify-plugin-daemon:0.0.6-local
+    # - langgenius/dify-api:1.1.2
+    # - langgenius/dify-web:1.1.2
+    # - langgenius/dify-plugin-daemon:0.0.6-local
 
 build-images:
   enable: false
