@@ -68,9 +68,9 @@ specify-images:
     # - langgenius/dify-api:1.1.2
     # - langgenius/dify-web:1.1.2
     # - langgenius/dify-plugin-daemon:0.0.6-local
-    # - ghcr.io/tbphp/gpt-load:latest
+    - ghcr.io/tbphp/gpt-load:v1.0.17
     # - lscr.io/linuxserver/code-server:version-4.102.2
-    - calciumion/new-api:v0.8.8.0-alpha.8
+    # - calciumion/new-api:v0.8.8.0-alpha.8
 
 build-images:
   enable: false
