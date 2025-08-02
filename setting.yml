@@ -71,7 +71,8 @@ specify-images:
     # - ghcr.io/tbphp/gpt-load:v1.0.17
     # - lscr.io/linuxserver/code-server:version-4.102.2
     # - calciumion/new-api:v0.8.8.0-alpha.8
-    - docker.n8n.io/n8nio/n8n
+    # - docker.n8n.io/n8nio/n8n
+    - ghcr.io/gethomepage/homepage:latest
 
 build-images:
   enable: false
