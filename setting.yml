@@ -73,7 +73,9 @@ specify-images:
     # - calciumion/new-api:v0.8.8.0-alpha.8
     # - docker.n8n.io/n8nio/n8n
     # - ghcr.io/gethomepage/homepage:latest
-    - ghcr.io/clove-ai/clove:latest
+    # - ghcr.io/clove-ai/clove:latest
+    - flyinshadow/boltdbweb:latest
+
 
 build-images:
   enable: false
