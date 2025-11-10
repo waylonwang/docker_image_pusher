@@ -74,7 +74,8 @@ specify-images:
     # - docker.n8n.io/n8nio/n8n
     # - ghcr.io/gethomepage/homepage:latest
     # - ghcr.io/clove-ai/clove:latest
-    - flyinshadow/boltdbweb:latest
+    # - flyinshadow/boltdbweb:latest
+    - boltdbwebeditor/boltdbwebeditor:latest
 
 
 build-images:
