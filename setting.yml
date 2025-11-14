@@ -75,7 +75,8 @@ specify-images:
     # - ghcr.io/gethomepage/homepage:latest
     # - ghcr.io/clove-ai/clove:latest
     # - flyinshadow/boltdbweb:latest
-    - boltdbwebeditor/boltdbwebeditor:latest
+    # - boltdbwebeditor/boltdbwebeditor:latest
+    - filebrowser/filebrowser:latest
 
 
 build-images:
