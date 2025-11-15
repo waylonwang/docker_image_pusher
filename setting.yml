@@ -76,8 +76,8 @@ specify-images:
     # - ghcr.io/clove-ai/clove:latest
     # - flyinshadow/boltdbweb:latest
     # - boltdbwebeditor/boltdbwebeditor:latest
-    - filebrowser/filebrowser:latest
-
+    # - filebrowser/filebrowser:latest
+    - gtstef/filebrowser:latest
 
 build-images:
   enable: false
