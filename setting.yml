@@ -78,7 +78,7 @@ specify-images:
     # - boltdbwebeditor/boltdbwebeditor:latest
     # - filebrowser/filebrowser:latest
     # - gtstef/filebrowser:latest
-      - ghcr.io/immich-app/immich-server:2.3.1
+      - ghcr.io/immich-app/immich-server:latest
 
 build-images:
   enable: false
