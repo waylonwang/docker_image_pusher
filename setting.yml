@@ -81,7 +81,7 @@ specify-images:
     # - ghcr.io/immich-app/immich-server:v2.3.1
     # - ghcr.io/immich-app/immich-machine-learning:v2.3.1
     # - bellamy/wallos:4.6.0
-    - mostafawahied/portracke:1.3.4
+    - mostafawahied/portracker:1.3.4
   
 
 build-images:
