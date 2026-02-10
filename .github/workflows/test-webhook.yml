@@ -1,0 +1,38 @@
+name: Test Webhook
+
+on:
+  workflow_dispatch:
+
+env:
+  OPENCLAW_WEBHOOK_URL: ${{ secrets.OPENCLAW_WEBHOOK_URL }}
+  OPENCLAW_HOOK_TOKEN: ${{ secrets.OPENCLAW_HOOK_TOKEN }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Test webhook 1 - simple text
+      run: |
+        echo "=== Test 1: Simple text ==="
+        curl -v -X POST "${{ secrets.OPENCLAW_WEBHOOK_URL }}" \
+          -H "Authorization: Bearer ${{ secrets.OPENCLAW_HOOK_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          -d '{"text":"test1: simple text from GitHub","mode":"now"}'
+
+    - name: Test webhook 2 - with environment variables
+      run: |
+        echo "=== Test 2: With env variables ==="
+        curl -v -X POST "${{ secrets.OPENCLAW_WEBHOOK_URL }}" \
+          -H "Authorization: Bearer ${{ secrets.OPENCLAW_HOOK_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          -d '{"text":"test2: with status and count","status":"success","count":5,"mode":"now"}'
+
+    - name: Test webhook 3 - with dynamic timestamp
+      run: |
+        echo "=== Test 3: Dynamic timestamp ==="
+        TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        echo "Timestamp: $TIMESTAMP"
+        curl -v -X POST "${{ secrets.OPENCLAW_WEBHOOK_URL }}" \
+          -H "Authorization: Bearer ${{ secrets.OPENCLAW_HOOK_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          -d "{\"text\":\"test3: dynamic timestamp\",\"timestamp\":\"$TIMESTAMP\",\"mode\":\"now\"}"
