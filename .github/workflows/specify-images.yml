@@ -154,3 +154,24 @@ jobs:
         echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
         echo "总共处理了 ${#images[@]} 个镜像"
         echo "总共更新了 $updated_count 个镜像"
+
+        # 将转存的镜像列表保存到环境变量，供webhook使用
+        echo "transfer_images=$images" >> $GITHUB_ENV
+        echo "transfer_count=$updated_count" >> $GITHUB_ENV
+
+    - name: Notify OpenClaw
+      if: always()  # 无论成功或失败都发送通知
+      run: |
+        curl -X POST "${{ secrets.OPENCLAW_WEBHOOK_URL }}" \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"event\": \"docker_image_transfer\",
+            \"status\": \"${{ job.status }}\",
+            \"run_id\": \"${{ github.run_id }}\",
+            \"run_number\": \"${{ github.run_number }}\",
+            \"run_url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\",
+            \"images\": \"${{ env.transfer_images }}\",
+            \"updated_count\": \"${{ env.transfer_count }}\",
+            \"actor\": \"${{ github.actor }}\",
+            \"timestamp\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"
+          }"
