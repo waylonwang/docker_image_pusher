@@ -163,6 +163,7 @@ jobs:
       if: always()  # 无论成功或失败都发送通知
       run: |
         curl -X POST "${{ secrets.OPENCLAW_WEBHOOK_URL }}" \
+          -H "Authorization: Bearer ${{ secrets.OPENCLAW_HOOK_TOKEN }}" \
           -H "Content-Type: application/json" \
           -d "{
             \"event\": \"docker_image_transfer\",
