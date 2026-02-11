@@ -162,17 +162,39 @@ jobs:
     - name: Notify OpenClaw
       if: always()  # 无论成功或失败都发送通知
       run: |
-        curl -X POST "${{ secrets.OPENCLAW_WEBHOOK_URL }}" \
+        echo "=========================================="
+        echo "发送 webhook 通知..."
+        echo "WEBHOOK_URL: ${{ secrets.OPENCLAW_WEBHOOK_URL }}"
+        echo "job.status: ${{ job.status }}"
+        echo "github.run_id: ${{ github.run_id }}"
+        echo "transfer_images: ${{ env.transfer_images }}"
+        echo "transfer_count: ${{ env.transfer_count }}"
+        echo "=========================================="
+        
+        # 生成 JSON 数据（单行）
+        WEBHOOK_DATA=$(cat <<EOF
+{
+  "event": "docker_image_transfer",
+  "status": "${{ job.status }}",
+  "run_id": "${{ github.run_id }}",
+  "run_number": "${{ github.run_number }}",
+  "run_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+  "images": "${{ env.transfer_images }}",
+  "updated_count": "${{ env.transfer_count }}",
+  "actor": "${{ github.actor }}",
+  "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+}
+EOF
+)
+        
+        echo "发送的数据: $WEBHOOK_DATA"
+        
+        # 发送 webhook
+        RESPONSE=$(curl -s -w "\n%{http_code}" \
+          -X POST "${{ secrets.OPENCLAW_WEBHOOK_URL }}" \
           -H "Authorization: Bearer ${{ secrets.OPENCLAW_HOOK_TOKEN }}" \
           -H "Content-Type: application/json" \
-          -d "{
-            \"event\": \"docker_image_transfer\",
-            \"status\": \"${{ job.status }}\",
-            \"run_id\": \"${{ github.run_id }}\",
-            \"run_number\": \"${{ github.run_number }}\",
-            \"run_url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\",
-            \"images\": \"${{ env.transfer_images }}\",
-            \"updated_count\": \"${{ env.transfer_count }}\",
-            \"actor\": \"${{ github.actor }}\",
-            \"timestamp\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"
-          }"
+          -d "$WEBHOOK_DATA")
+        
+        echo "HTTP 状态码: $RESPONSE"
+        echo "=========================================="
