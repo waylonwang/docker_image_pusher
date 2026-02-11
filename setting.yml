@@ -19,6 +19,8 @@ stacks-deploy:
 specify-images:
   enable: true
   images:
+    # 测试镜像
+    - hello-world:latest
     # rancher
     # - rancher/rancher:v2.6.6-rc1
     # - rancher/os:v1.5.8
