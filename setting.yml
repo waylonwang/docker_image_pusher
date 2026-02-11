@@ -1,6 +1,7 @@
 stacks-deploy:
   enable: false
   repos:
+  # 重新触发测试
     - https://github.com/waylonwang/swarm-stack-application.git
     - https://github.com/waylonwang/swarm-stack-ai.m1.git
     - https://github.com/waylonwang/swarm-stack-ai.m2.git    
