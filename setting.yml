@@ -21,7 +21,10 @@ specify-images:
   enable: true
   images:
     # 测试镜像
-    - hello-world:latest
+    # - hello-world:latest
+    # - lscr.io/linuxserver/grocy:4.5.0
+    # 需要转存的镜像
+    - eceasy/cli-proxy-api:v6.8.18
     # rancher
     # - rancher/rancher:v2.6.6-rc1
     # - rancher/os:v1.5.8
