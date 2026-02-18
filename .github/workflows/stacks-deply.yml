@@ -54,111 +54,234 @@ jobs:
       run: |
         images=()  # 初始化镜像数组
         updated_count=0  # 初始化更新镜像计数
+        skipped_count=0  # 初始化跳过镜像计数
+        failed_count=0   # 初始化失败镜像计数
+        failed_images=() # 失败的镜像列表
         IFS=',' read -r -a repos <<< "$repos"  # 读取环境变量中的仓库数组
 
         echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 
+        # 定义函数：格式化输出 layers 信息
+        print_layers_info() {
+            local layers="$1"
+            local label="$2"
+
+            echo "$label"
+            if [ ${#layers} -le 100 ]; then
+                echo "$layers"
+            elif [ ${#layers} -le 200 ]; then
+                echo "${layers:0:50}...${layers: -50}"
+            else
+                echo "${layers:0:50}...${layers:$((${#layers}/2-25)):50}...${layers: -50}"
+            fi
+        }
+
         # 处理仓库数组中的每一个仓库
         for repo in "${repos[@]}"; do
             echo "----------------------------------------------------"
-            echo "处理仓库: $repo"
-            
+            echo "📦 处理仓库: $repo"
+
             echo "正在克隆仓库: $repo"
-            git clone "$repo" repo_clone  # 克隆仓库
-            if [ -f "repo_clone/docker-compose.yml" ]; then  # 检查是否存在 docker-compose.yml 文件
-                echo "在 $repo 中找到 docker-compose.yml"
+            if ! git clone "$repo" repo_clone 2>&1; then
+                echo "❌ 克隆仓库失败: $repo"
+                continue
+            fi
+
+            if [ -f "repo_clone/docker-compose.yml" ]; then
+                echo "✅ 在 $repo 中找到 docker-compose.yml"
+                image_count=0
                 while IFS= read -r line || [ -n "$line" ]; do
-                    # 查找注释中的 image-ref 键
-                    if [[ "$line" =~ \#[[:space:]]*image\-ref[[:space:]]*:[[:space:]]*(.*) ]]; then
+                    # 查找注释中的 image-ref 键（改进正则表达式）
+                    if [[ "$line" =~ #[[:space:]]image-ref:[[:space:]]*(.+)$ ]]; then
                         image_ref="${BASH_REMATCH[1]}"
                         image_ref=$(echo "$image_ref" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')  # 去除前后空格
-                        images+=("$image_ref")  # 将 image-ref 的值添加到镜像数组中
+                        if [ -n "$image_ref" ]; then
+                            images+=("$image_ref")
+                            image_count=$((image_count + 1))
+                        fi
                     fi
                 done < repo_clone/docker-compose.yml
+                echo "   找到 $image_count 个镜像引用"
+            else
+                echo "⚠️  未找到 docker-compose.yml"
             fi
             rm -rf repo_clone  # 删除克隆的仓库文件夹
         done
+
+        # 如果没有找到任何镜像，跳过后续处理
+        if [ ${#images[@]} -eq 0 ]; then
+            echo "⚠️  未找到任何镜像引用，跳过后续处理。"
+            echo "transfer_images=" >> $GITHUB_ENV
+            echo "transfer_count=0" >> $GITHUB_ENV
+            echo "transfer_skipped=0" >> $GITHUB_ENV
+            echo "transfer_failed=0" >> $GITHUB_ENV
+            exit 0
+        fi
+
+        echo "============================================================================="
+        echo "共找到 ${#images[@]} 个镜像需要处理"
+        echo "============================================================================="
 
         # 处理镜像数组中的每一个镜像
         for image in "${images[@]}"; do
             echo "============================================================================="
             echo "处理镜像: $image"
-            
-            # 解析镜像名称中的各个部分
-            registry=$(echo "$image" | awk -F'/' '{print $1}')
-            repository_with_tag=$(echo "$image" | awk -F'/' '{print $NF}')
-            namespace_and_repo=$(echo "$image" | awk -F'/' '{if (NF==3) print $2"/"$3; else if (NF==2) print $1"/"$2; else print ""}')
-      
-            namespace=$(echo "$namespace_and_repo" | awk -F'/' '{print $1}')
-            repo=$(echo "$repository_with_tag" | awk -F':' '{print $1}')
-            tag=$(echo "$repository_with_tag" | awk -F':' '{if (NF>1) print $2; else print "latest"}')
-      
+
+            # 解析镜像名称（使用更简洁的方式）
+            if [[ "$image" =~ ^([^/]+)/(.*)$ ]]; then
+                registry="${BASH_REMATCH[1]}"
+                remainder="${BASH_REMATCH[2]}"
+
+                if [[ "$remainder" =~ ^([^/]+)/(.*)$ ]]; then
+                    namespace="${BASH_REMATCH[1]}"
+                    repo_and_tag="${BASH_REMATCH[2]}"
+                else
+                    namespace=""
+                    repo_and_tag="$remainder"
+                fi
+
+                if [[ "$repo_and_tag" =~ ^([^:]+):?(.*)$ ]]; then
+                    repo="${BASH_REMATCH[1]}"
+                    tag="${BASH_REMATCH[2]:-latest}"
+                else
+                    repo="$repo_and_tag"
+                    tag="latest"
+                fi
+            else
+                echo "❌ 无法解析镜像名称: $image"
+                failed_count=$((failed_count + 1))
+                failed_images+=("$image")
+                continue
+            fi
+
             echo "解析出的注册表: $registry"
             echo "解析出的命名空间: $namespace"
             echo "解析出的仓库: $repo"
             echo "解析出的标签: $tag"
             echo "----------------------------------------------------"
-            
-            target_image="$MY_REGISTRY/$namespace/$repo:$tag"  # 目标镜像地址
+
+            target_image="$MY_REGISTRY/${namespace:+$namespace/}$repo:$tag"
             echo "目标镜像: $target_image"
             echo "----------------------------------------------------"
 
-            # 获取源镜像的 manifest
-            source_manifest=$(skopeo inspect docker://$image)
-            source_layers=$(echo "$source_manifest" | jq -r '.Layers[]' | sed -n '2,$p' | tr '\n' ' ')
-            
-            # 输出 source_layers 的内容
-            echo "源镜像 $image 的 layers（忽略首层后）:"
-            if [ ${#source_layers} -le 100 ]; then
-                echo "$source_layers"
-            elif [ ${#source_layers} -le 200 ]; then
-                echo "${source_layers:0:50}...${source_layers: -50}"
-            else
-                echo "${source_layers:0:50}...${source_layers:$((${#source_layers}/2-25)):50}...${source_layers: -50}"
+            # 获取源镜像的 manifest（包含错误处理）
+            if ! source_manifest=$(skopeo inspect docker://$image 2>&1); then
+                echo "❌ 无法获取源镜像 manifest: $source_manifest"
+                failed_count=$((failed_count + 1))
+                failed_images+=("$image")
+                continue
             fi
 
+            if ! source_manifest_raw=$(skopeo inspect --raw docker://$image 2>&1); then
+                echo "❌ 无法获取源镜像 raw manifest: $source_manifest_raw"
+                failed_count=$((failed_count + 1))
+                failed_images+=("$image")
+                continue
+            fi
+
+            # 获取镜像大小
+            source_size=$(echo "$source_manifest_raw" | jq '[.layers[] | select(.size != null) | .size] | add' 2>/dev/null || echo "0")
+            source_size_mb=$(echo "scale=2; $source_size / 1024 / 1024" | bc 2>/dev/null || echo "0")
+            echo "镜像大小: $source_size bytes (${source_size_mb} MB)"
+            echo "----------------------------------------------------"
+
+            source_layers=$(echo "$source_manifest" | jq -r '.Layers[]' | sed -n '2,$p' | tr '\n' ' ')
+            print_layers_info "$source_layers" "源镜像 $image 的 layers（忽略首层后）:"
+
             # 获取目标镜像的 manifest
-            target_manifest=$(skopeo inspect --creds $MY_REGISTRY_USER:$MY_REGISTRY_PASSWORD docker://$target_image || echo "")
-            if [ -n "$target_manifest" ]; then
+            target_manifest=$(skopeo inspect --creds $MY_REGISTRY_USER:$MY_REGISTRY_PASSWORD docker://$target_image 2>&1 || echo "")
+            if [ -n "$target_manifest" ] && ! echo "$target_manifest" | grep -q "error"; then
                 target_layers=$(echo "$target_manifest" | jq -r '.Layers[]' | sed -n '2,$p' | tr '\n' ' ')
+                print_layers_info "$target_layers" "目标镜像 $target_image 的 layers（忽略首层后）:"
             else
                 target_layers=""
             fi
-
-            # 输出 target_layers 的内容
-            echo "目标镜像 $target_image 的 layers（忽略首层后）:"
-            if [ ${#target_layers} -le 100 ]; then
-                echo "$target_layers"
-            elif [ ${#target_layers} -le 200 ]; then
-                echo "${target_layers:0:50}...${target_layers: -50}"
-            else
-                echo "${target_layers:0:50}...${target_layers:$((${#target_layers}/2-25)):50}...${target_layers: -50}"
-            fi
             echo "----------------------------------------------------"
 
-            if [ -n "$target_layers" ]; then
-                if [ "$source_layers" == "$target_layers" ]; then
-                    echo "镜像 $target_image 已经存在于 $MY_REGISTRY 且各层一致。"
-                    continue  # 如果镜像已经存在并且各层一致，跳过该镜像
-                fi
+            # 检查是否需要跳过
+            if [ -n "$target_layers" ] && [ "$source_layers" == "$target_layers" ]; then
+                echo "✅ 镜像 $target_image 已存在且各层一致，跳过。"
+                skipped_count=$((skipped_count + 1))
+                continue
             fi
 
-            echo "目标镜像 $target_image 不存在于 $MY_REGISTRY 或者各层不匹配，继续拉取和推送。"
+            echo "⬇️  开始拉取和推送镜像..."
             echo "----------------------------------------------------"
-            
-            echo "Docker 拉取 $image"
-            docker pull $image  # 拉取源镜像
-            
-            echo "Docker 打标签 $image 为 $target_image"
-            docker tag $image $target_image  # 给镜像打标签
-            echo "----------------------------------------------------"
-            
-            echo "Docker 推送 $target_image"
-            docker push $target_image  # 推送镜像到目标仓库
-            
-            updated_count=$((updated_count + 1))  # 增加更新镜像计数
+
+            # 拉取镜像
+            if ! docker pull $image; then
+                echo "❌ Docker 拉取失败: $image"
+                failed_count=$((failed_count + 1))
+                failed_images+=("$image")
+                continue
+            fi
+
+            # 打标签
+            if ! docker tag $image $target_image; then
+                echo "❌ Docker 打标签失败: $image -> $target_image"
+                failed_count=$((failed_count + 1))
+                failed_images+=("$image")
+                continue
+            fi
+
+            # 推送镜像
+            if ! docker push $target_image; then
+                echo "❌ Docker 推送失败: $target_image"
+                failed_count=$((failed_count + 1))
+                failed_images+=("$image")
+                continue
+            fi
+
+            echo "✅ 镜像推送成功: $target_image"
+            updated_count=$((updated_count + 1))
         done
-        
+
         echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-        echo "总共处理了 ${#images[@]} 个镜像"
-        echo "总共有 $updated_count 个镜像进行了更新"
+        echo "📊 处理汇总:"
+        echo "   总计: ${#images[@]} 个镜像"
+        echo "   ✅ 更新: $updated_count 个"
+        echo "   ⏭️  跳过: $skipped_count 个"
+        echo "   ❌ 失败: $failed_count 个"
+
+        if [ $failed_count -gt 0 ]; then
+            echo "   失败的镜像:"
+            for img in "${failed_images[@]}"; do
+                echo "      - $img"
+            done
+        fi
+
+        # 将转存的镜像列表保存到环境变量，供webhook使用
+        images_csv=$(IFS=','; echo "${images[*]}")
+        echo "transfer_images=$images_csv" >> $GITHUB_ENV
+        echo "transfer_count=$updated_count" >> $GITHUB_ENV
+        echo "transfer_skipped=$skipped_count" >> $GITHUB_ENV
+        echo "transfer_failed=$failed_count" >> $GITHUB_ENV
+
+    - name: Notify OpenClaw
+      if: always()  # 无论成功或失败都发送通知
+      run: |
+        echo "=========================================="
+        echo "发送 webhook 通知..."
+        echo "WEBHOOK_URL: ${{ secrets.OPENCLAW_WEBHOOK_URL }}"
+        echo "job.status: ${{ job.status }}"
+        echo "github.run_id: ${{ github.run_id }}"
+        echo "transfer_images: ${{ env.transfer_images }}"
+        echo "transfer_count: ${{ env.transfer_count }}"
+        echo "transfer_skipped: ${{ env.transfer_skipped }}"
+        echo "transfer_failed: ${{ env.transfer_failed }}"
+        echo "=========================================="
+
+        # 生成 JSON 数据（单行）- 包含更详细的统计信息
+        WEBHOOK_DATA="{\"event\":\"docker_image_transfer\",\"status\":\"${{ job.status }}\",\"run_id\":\"${{ github.run_id }}\",\"run_number\":\"${{ github.run_number }}\",\"run_url\":\"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\",\"images\":\"${{ env.transfer_images }}\",\"updated_count\":\"${{ env.transfer_count }}\",\"skipped_count\":\"${{ env.transfer_skipped }}\",\"failed_count\":\"${{ env.transfer_failed }}\",\"actor\":\"${{ github.actor }}\",\"timestamp\":\"$(date -u +\"%Y-%m-%dT%H:%M:%SZ\")\"}"
+
+        echo "发送的数据: $WEBHOOK_DATA"
+
+        # 发送 webhook
+        RESPONSE=$(curl -s -w "\n%{http_code}" \
+          -X POST "${{ secrets.OPENCLAW_WEBHOOK_URL }}" \
+          -H "Authorization: Bearer ${{ secrets.OPENCLAW_HOOK_TOKEN }}" \
+          -H "Content-Type: application/json" \
+          -d "$WEBHOOK_DATA")
+
+        echo "HTTP 状态码: $RESPONSE"
+        echo "=========================================="
