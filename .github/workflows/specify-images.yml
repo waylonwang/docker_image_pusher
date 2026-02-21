@@ -120,41 +120,126 @@ jobs:
             fi
 
             # 获取镜像大小 - 从 manifest 的 layers 计算
-            # 首先尝试直接从 layers 计算
-            source_size=$(echo "$source_manifest" | jq -r '.Layers // "null"' 2>/dev/null)
+            echo "🔍 [DEBUG] 开始计算镜像大小..."
 
-            if [ "$source_size" != "null" ] && [ -n "$source_size" ]; then
-                # skopeo inspect 返回了 Layers 数组，但这个是 digest 列表，没有 size
-                # 需要获取 raw manifest 来计算 size
+            # 步骤1: 检查 source_manifest 的 Layers 字段
+            echo "🔍 [DEBUG] 步骤1: 检查 skopeo inspect 输出的 Layers 字段"
+            source_layers_check=$(echo "$source_manifest" | jq -r '.Layers // "null"' 2>/dev/null)
+            echo "🔍 [DEBUG] source_manifest.Layers = $source_layers_check"
+
+            if [ "$source_layers_check" != "null" ] && [ -n "$source_layers_check" ]; then
+                echo "✅ [DEBUG] Layers 字段存在，继续处理"
+
+                # 步骤2: 获取 raw manifest
+                echo "🔍 [DEBUG] 步骤2: 获取 raw manifest"
                 source_manifest_raw=$(skopeo inspect --raw docker://$image 2>&1)
+                echo "🔍 [DEBUG] raw manifest 长度: ${#source_manifest_raw} 字符"
 
-                # 检查是否是 Manifest List
-                media_type=$(echo "$source_manifest_raw" | jq -r '.mediaType // ""' 2>/dev/null)
+                # 步骤3: 检查 mediaType
+                echo "🔍 [DEBUG] 步骤3: 检查 mediaType"
+                media_type=$(echo "$source_manifest_raw" | jq -r '.mediaType // "unknown"' 2>/dev/null)
+                echo "🔍 [DEBUG] mediaType = $media_type"
 
+                # 步骤4: 检查是否是 Manifest List
+                echo "🔍 [DEBUG] 步骤4: 判断 manifest 类型"
                 if [[ "$media_type" == *"manifest.list"* ]]; then
-                    # 多架构镜像 - 获取 amd64/linux 的 digest
-                    echo "⚠️  检测到多架构镜像，获取 amd64 架构大小"
+                    echo "✅ [DEBUG] 这是 Manifest List (多架构镜像)"
+
+                    # 步骤5: 获取 amd64 digest
+                    echo "🔍 [DEBUG] 步骤5: 获取 amd64/linux 的 digest"
+                    echo "🔍 [DEBUG] 查找条件: architecture=amd64, os=linux"
+
+                    # 显示所有可用的架构
+                    echo "🔍 [DEBUG] 所有可用的架构:"
+                    echo "$source_manifest_raw" | jq -r '.manifests[] | "  - \(.platform.os)/\(.platform.architecture): \(.digest)"' 2>/dev/null || echo "  (无法解析)"
+
                     amd64_digest=$(echo "$source_manifest_raw" | jq -r '.manifests[] | select(.platform.architecture == "amd64" and .platform.os == "linux") | .digest' 2>/dev/null | head -1)
+                    echo "🔍 [DEBUG] amd64_digest = $amd64_digest"
 
                     if [ -n "$amd64_digest" ] && [ "$amd64_digest" != "null" ]; then
-                        # 构造带 digest 的镜像引用
+                        # 步骤6: 构造带 digest 的镜像引用
+                        echo "🔍 [DEBUG] 步骤6: 构造带 digest 的镜像引用"
                         image_with_digest="${image%%:*}@${amd64_digest}"
+                        echo "🔍 [DEBUG] image_with_digest = $image_with_digest"
+
+                        # 步骤7: 获取 amd64 manifest
+                        echo "🔍 [DEBUG] 步骤7: 获取 amd64 架构的具体 manifest"
                         amd64_manifest=$(skopeo inspect --raw docker://$image_with_digest 2>&1)
-                        source_size=$(echo "$amd64_manifest" | jq -r '[.layers[].size] | add // 0' 2>/dev/null || echo "0")
+
+                        # 检查是否成功
+                        if echo "$amd64_manifest" | grep -q "error"; then
+                            echo "❌ [DEBUG] 获取 amd64 manifest 失败:"
+                            echo "$amd64_manifest" | head -5
+                            source_size=0
+                        else
+                            echo "✅ [DEBUG] 成功获取 amd64 manifest"
+
+                            # 显示 amd64 manifest 的 mediaType
+                            amd64_media_type=$(echo "$amd64_manifest" | jq -r '.mediaType // "unknown"' 2>/dev/null)
+                            echo "🔍 [DEBUG] amd64 manifest mediaType = $amd64_media_type"
+
+                            # 检查是否有 layers
+                            has_layers=$(echo "$amd64_manifest" | jq 'has("layers")' 2>/dev/null)
+                            echo "🔍 [DEBUG] has(layers) = $has_layers"
+
+                            if [ "$has_layers" = "true" ]; then
+                                layers_count=$(echo "$amd64_manifest" | jq '.layers | length' 2>/dev/null)
+                                echo "🔍 [DEBUG] layers 数量 = $layers_count"
+
+                                # 显示前3个 layer 的信息
+                                echo "🔍 [DEBUG] 前3个 layers 的信息:"
+                                echo "$amd64_manifest" | jq '.layers[0:3] | .[] | "  - size: \(.size), digest: \(.digest[0:30])..."' 2>/dev/null || echo "  (无法解析)"
+
+                                # 计算总大小
+                                source_size=$(echo "$amd64_manifest" | jq -r '[.layers[].size] | add // 0' 2>/dev/null || echo "0")
+                                echo "🔍 [DEBUG] 计算得到的总大小: $source_size bytes"
+                            else
+                                echo "❌ [DEBUG] amd64 manifest 中没有 layers 字段"
+                                source_size=0
+                            fi
+                        fi
                     else
+                        echo "❌ [DEBUG] 无法找到 amd64/linux 的 digest"
                         source_size=0
                     fi
                 elif [[ "$media_type" == *"manifest.v2"* ]]; then
-                    # 标准 v2 manifest - 直接从 layers 计算
-                    source_size=$(echo "$source_manifest_raw" | jq -r '[.layers[].size] | add // 0' 2>/dev/null || echo "0")
+                    echo "✅ [DEBUG] 这是标准 v2 manifest"
+
+                    # 检查是否有 layers
+                    has_layers=$(echo "$source_manifest_raw" | jq 'has("layers")' 2>/dev/null)
+                    echo "🔍 [DEBUG] has(layers) = $has_layers"
+
+                    if [ "$has_layers" = "true" ]; then
+                        layers_count=$(echo "$source_manifest_raw" | jq '.layers | length' 2>/dev/null)
+                        echo "🔍 [DEBUG] layers 数量 = $layers_count"
+
+                        # 显示前3个 layer 的信息
+                        echo "🔍 [DEBUG] 前3个 layers 的信息:"
+                        echo "$source_manifest_raw" | jq '.layers[0:3] | .[] | "  - size: \(.size), digest: \(.digest[0:30])..."' 2>/dev/null || echo "  (无法解析)"
+
+                        # 计算总大小
+                        source_size=$(echo "$source_manifest_raw" | jq -r '[.layers[].size] | add // 0' 2>/dev/null || echo "0")
+                        echo "🔍 [DEBUG] 计算得到的总大小: $source_size bytes"
+                    else
+                        echo "❌ [DEBUG] manifest 中没有 layers 字段"
+                        source_size=0
+                    fi
                 else
+                    echo "❌ [DEBUG] 未知的 manifest 类型: $media_type"
+                    # 尝试显示原始 JSON 的前几行
+                    echo "🔍 [DEBUG] raw manifest 前500字符:"
+                    echo "$source_manifest_raw" | head -c 500
                     source_size=0
                 fi
             else
+                echo "❌ [DEBUG] source_manifest 中没有 Layers 字段或为空"
+                echo "🔍 [DEBUG] source_manifest 前500字符:"
+                echo "$source_manifest" | head -c 500
                 source_size=0
             fi
 
             source_size_mb=$(awk "BEGIN {printf \"%.2f\", $source_size / 1024 / 1024}")
+            echo "🔍 [DEBUG] 最终结果: $source_size bytes ($source_size_mb MB)"
             echo "镜像大小: $source_size bytes (${source_size_mb} MB)"
             echo "----------------------------------------------------"
 
