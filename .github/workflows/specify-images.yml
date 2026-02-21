@@ -126,9 +126,13 @@ jobs:
                 continue
             fi
 
-            # 获取镜像大小
-            source_size=$(echo "$source_manifest_raw" | jq '[.layers[] | select(.size != null) | .size] | add' 2>/dev/null || echo "0")
-            source_size_mb=$(echo "scale=2; $source_size / 1024 / 1024" | bc 2>/dev/null || echo "0")
+            # 获取镜像大小（使用 skopeo inspect 直接获取）
+            source_size=$(skopeo inspect docker://$image --format '{{.Size}}' 2>/dev/null || echo "0")
+            if [ "$source_size" = "0" ]; then
+                # 如果 --format 失败，尝试从 manifest 计算
+                source_size=$(echo "$source_manifest_raw" | jq '[.layers[]? | select(.size != null) | .size] | add' 2>/dev/null || echo "0")
+            fi
+            source_size_mb=$(awk "BEGIN {printf \"%.2f\", $source_size / 1024 / 1024}")
             echo "镜像大小: $source_size bytes (${source_size_mb} MB)"
             echo "----------------------------------------------------"
 
