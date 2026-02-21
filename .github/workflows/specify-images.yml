@@ -119,24 +119,39 @@ jobs:
                 continue
             fi
 
-            # 获取镜像大小 - 使用 --override-arch 确保获取特定架构的镜像大小
-            source_size=$(skopeo inspect --override-arch=amd64 --override-os=linux docker://$image --format '{{.Size}}' 2>/dev/null || echo "0")
+            # 获取镜像大小 - 从特定架构的 manifest 的 layers 计算
+            # 使用 --override-arch 强制获取 amd64/linux 架构的 manifest
+            source_manifest_raw=$(skopeo inspect --raw --override-arch=amd64 --override-os=linux docker://$image 2>&1)
 
-            # 如果仍然是0，尝试从 manifest raw 计算
-            if [ "$source_size" = "0" ]; then
-                # 获取特定架构的 raw manifest
-                source_manifest_raw=$(skopeo inspect --raw --override-arch=amd64 --override-os=linux docker://$image 2>&1)
+            # 检查是否成功获取 manifest
+            if echo "$source_manifest_raw" | grep -q "error"; then
+                echo "⚠️  无法获取 manifest，大小显示为 0"
+                source_size=0
+            else
+                # 从 layers 数组计算总大小（这是镜像内容的实际大小）
+                source_size=$(echo "$source_manifest_raw" | jq '[.layers[]? | select(.size != null) | .size] | add' 2>/dev/null || echo "0")
 
-                # 检查是否是 manifest list（多架构镜像）
-                media_type=$(echo "$source_manifest_raw" | jq -r '.mediaType // ""' 2>/dev/null)
+                # 检查是否为 manifest list（layers 不存在或为空）
+                if [ "$source_size" = "0" ]; then
+                    media_type=$(echo "$source_manifest_raw" | jq -r '.mediaType // ""' 2>/dev/null)
+                    if [[ "$media_type" == *"manifest.list"* ]]; then
+                        echo "⚠️  检测到多架构镜像，尝试获取具体架构的 layers"
+                        # 获取 amd64/linux 架构的 digest
+                        amd64_digest=$(echo "$source_manifest_raw" | jq -r '.manifests[] | select(.platform.architecture == "amd64" and .platform.os == "linux") | .digest' 2>/dev/null | head -1)
 
-                if [[ "$media_type" == *"manifest.list"* ]]; then
-                    # 这是多架构镜像，尝试从第一个manifest获取大小
-                    echo "⚠️  检测到多架构镜像，使用 linux/amd64 架构"
-                    source_size=$(echo "$source_manifest_raw" | jq '[.manifests[] | select(.platform.architecture == "amd64" and .platform.os == "linux") | .size] | add' 2>/dev/null || echo "0")
-                elif [[ "$media_type" == *"manifest.v2"* ]]; then
-                    # 标准 v2 manifest
-                    source_size=$(echo "$source_manifest_raw" | jq '[.layers[]? | select(.size != null) | .size] | add' 2>/dev/null || echo "0")
+                        if [ -n "$amd64_digest" ]; then
+                            # 从原始镜像名称提取 registry 和 repo
+                            if [[ "$image" =~ ^([^/]+)/(.*)$ ]]; then
+                                registry="${BASH_REMATCH[1]}"
+                                remainder="${BASH_REMATCH[2]}"
+                                # 重新构造镜像引用，使用 digest
+                                image_ref="${registry}/$(echo "$remainder" | sed 's/:.*$//')@$amd64_digest"
+                                # 获取具体架构的 manifest
+                                specific_manifest=$(skopeo inspect --raw docker://$image_ref 2>&1)
+                                source_size=$(echo "$specific_manifest" | jq '[.layers[]? | select(.size != null) | .size] | add' 2>/dev/null || echo "0")
+                            fi
+                        fi
+                    fi
                 fi
             fi
 
