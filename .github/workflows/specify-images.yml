@@ -119,40 +119,39 @@ jobs:
                 continue
             fi
 
-            # 获取镜像大小 - 从特定架构的 manifest 的 layers 计算
-            # 使用 --override-arch 强制获取 amd64/linux 架构的 manifest
-            source_manifest_raw=$(skopeo inspect --raw --override-arch=amd64 --override-os=linux docker://$image 2>&1)
+            # 获取镜像大小 - 从 manifest 的 layers 计算
+            # 首先尝试直接从 layers 计算
+            source_size=$(echo "$source_manifest" | jq -r '.Layers // "null"' 2>/dev/null)
 
-            # 检查是否成功获取 manifest
-            if echo "$source_manifest_raw" | grep -q "error"; then
-                echo "⚠️  无法获取 manifest，大小显示为 0"
-                source_size=0
-            else
-                # 从 layers 数组计算总大小（这是镜像内容的实际大小）
-                source_size=$(echo "$source_manifest_raw" | jq '[.layers[]? | select(.size != null) | .size] | add' 2>/dev/null || echo "0")
+            if [ "$source_size" != "null" ] && [ -n "$source_size" ]; then
+                # skopeo inspect 返回了 Layers 数组，但这个是 digest 列表，没有 size
+                # 需要获取 raw manifest 来计算 size
+                source_manifest_raw=$(skopeo inspect --raw docker://$image 2>&1)
 
-                # 检查是否为 manifest list（layers 不存在或为空）
-                if [ "$source_size" = "0" ]; then
-                    media_type=$(echo "$source_manifest_raw" | jq -r '.mediaType // ""' 2>/dev/null)
-                    if [[ "$media_type" == *"manifest.list"* ]]; then
-                        echo "⚠️  检测到多架构镜像，尝试获取具体架构的 layers"
-                        # 获取 amd64/linux 架构的 digest
-                        amd64_digest=$(echo "$source_manifest_raw" | jq -r '.manifests[] | select(.platform.architecture == "amd64" and .platform.os == "linux") | .digest' 2>/dev/null | head -1)
+                # 检查是否是 Manifest List
+                media_type=$(echo "$source_manifest_raw" | jq -r '.mediaType // ""' 2>/dev/null)
 
-                        if [ -n "$amd64_digest" ]; then
-                            # 从原始镜像名称提取 registry 和 repo
-                            if [[ "$image" =~ ^([^/]+)/(.*)$ ]]; then
-                                registry="${BASH_REMATCH[1]}"
-                                remainder="${BASH_REMATCH[2]}"
-                                # 重新构造镜像引用，使用 digest
-                                image_ref="${registry}/$(echo "$remainder" | sed 's/:.*$//')@$amd64_digest"
-                                # 获取具体架构的 manifest
-                                specific_manifest=$(skopeo inspect --raw docker://$image_ref 2>&1)
-                                source_size=$(echo "$specific_manifest" | jq '[.layers[]? | select(.size != null) | .size] | add' 2>/dev/null || echo "0")
-                            fi
-                        fi
+                if [[ "$media_type" == *"manifest.list"* ]]; then
+                    # 多架构镜像 - 获取 amd64/linux 的 digest
+                    echo "⚠️  检测到多架构镜像，获取 amd64 架构大小"
+                    amd64_digest=$(echo "$source_manifest_raw" | jq -r '.manifests[] | select(.platform.architecture == "amd64" and .platform.os == "linux") | .digest' 2>/dev/null | head -1)
+
+                    if [ -n "$amd64_digest" ] && [ "$amd64_digest" != "null" ]; then
+                        # 构造带 digest 的镜像引用
+                        image_with_digest="${image%%:*}@${amd64_digest}"
+                        amd64_manifest=$(skopeo inspect --raw docker://$image_with_digest 2>&1)
+                        source_size=$(echo "$amd64_manifest" | jq -r '[.layers[].size] | add // 0' 2>/dev/null || echo "0")
+                    else
+                        source_size=0
                     fi
+                elif [[ "$media_type" == *"manifest.v2"* ]]; then
+                    # 标准 v2 manifest - 直接从 layers 计算
+                    source_size=$(echo "$source_manifest_raw" | jq -r '[.layers[].size] | add // 0' 2>/dev/null || echo "0")
+                else
+                    source_size=0
                 fi
+            else
+                source_size=0
             fi
 
             source_size_mb=$(awk "BEGIN {printf \"%.2f\", $source_size / 1024 / 1024}")
