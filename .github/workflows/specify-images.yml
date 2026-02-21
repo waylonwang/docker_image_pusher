@@ -140,9 +140,9 @@ jobs:
                 media_type=$(echo "$source_manifest_raw" | jq -r '.mediaType // "unknown"' 2>/dev/null)
                 echo "🔍 [DEBUG] mediaType = $media_type"
 
-                # 步骤4: 检查是否是 Manifest List
+                # 步骤4: 检查是否是 Manifest List 或 OCI Image Index
                 echo "🔍 [DEBUG] 步骤4: 判断 manifest 类型"
-                if [[ "$media_type" == *"manifest.list"* ]]; then
+                if [[ "$media_type" == *"manifest.list"* ]] || [[ "$media_type" == *"image.index"* ]]; then
                     echo "✅ [DEBUG] 这是 Manifest List (多架构镜像)"
 
                     # 步骤5: 获取 amd64 digest
@@ -202,8 +202,8 @@ jobs:
                         echo "❌ [DEBUG] 无法找到 amd64/linux 的 digest"
                         source_size=0
                     fi
-                elif [[ "$media_type" == *"manifest.v2"* ]]; then
-                    echo "✅ [DEBUG] 这是标准 v2 manifest"
+                elif [[ "$media_type" == *"manifest.v2"* ]] || [[ "$media_type" == *"image.manifest"* ]]; then
+                    echo "✅ [DEBUG] 这是标准 v2 manifest 或 OCI manifest"
 
                     # 检查是否有 layers
                     has_layers=$(echo "$source_manifest_raw" | jq 'has("layers")' 2>/dev/null)

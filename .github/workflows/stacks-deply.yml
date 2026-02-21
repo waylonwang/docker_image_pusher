@@ -181,10 +181,10 @@ jobs:
                 # 需要获取 raw manifest 来计算 size
                 source_manifest_raw=$(skopeo inspect --raw docker://$image 2>&1)
 
-                # 检查是否是 Manifest List
+                # 检查是否是 Manifest List 或 OCI Image Index
                 media_type=$(echo "$source_manifest_raw" | jq -r '.mediaType // ""' 2>/dev/null)
 
-                if [[ "$media_type" == *"manifest.list"* ]]; then
+                if [[ "$media_type" == *"manifest.list"* ]] || [[ "$media_type" == *"image.index"* ]]; then
                     # 多架构镜像 - 获取 amd64/linux 的 digest
                     echo "⚠️  检测到多架构镜像，获取 amd64 架构大小"
                     amd64_digest=$(echo "$source_manifest_raw" | jq -r '.manifests[] | select(.platform.architecture == "amd64" and .platform.os == "linux") | .digest' 2>/dev/null | head -1)
@@ -197,8 +197,8 @@ jobs:
                     else
                         source_size=0
                     fi
-                elif [[ "$media_type" == *"manifest.v2"* ]]; then
-                    # 标准 v2 manifest - 直接从 layers 计算
+                elif [[ "$media_type" == *"manifest.v2"* ]] || [[ "$media_type" == *"image.manifest"* ]]; then
+                    # 标准 v2 manifest 或 OCI manifest - 直接从 layers 计算
                     source_size=$(echo "$source_manifest_raw" | jq -r '[.layers[].size] | add // 0' 2>/dev/null || echo "0")
                 else
                     source_size=0
