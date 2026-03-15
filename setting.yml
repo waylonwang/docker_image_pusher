@@ -88,8 +88,10 @@ specify-images:
     # - mostafawahied/portracker:1.3.4
     # - lscr.io/linuxserver/grocy:4.5.0
     # - eceasy/cli-proxy-api:v6.8.18
-    - ghcr.io/openclaw/openclaw:2026.3.12
+    # - ghcr.io/openclaw/openclaw:2026.3.12
     # - ghcr.io/waylonwang/openclaw:analysis-only-analyze-code
+    - ghcr.io/volcengine/openviking:v0.2.7    
+    - docker.litellm.ai/berriai/litellm:main-stable
     - ghcr.io/comet-ml/opik/opik-frontend:1.1.10.40-4507
     - ghcr.io/comet-ml/opik/opik-backend:1.10.40-4507
     - ghcr.io/comet-ml/opik/opik-python-backend:1.10.40-4507
@@ -101,6 +103,7 @@ specify-images:
     - langfuse/langfuse:3.158.0
     - langfuse/langfuse-worker:3.158.0
     - quay.io/minio/aistor/minio:RELEASE.2026-03-12T15-15-27Z
+
   
 
 build-images:
