@@ -90,9 +90,9 @@ specify-images:
     # - eceasy/cli-proxy-api:v6.8.18
     # - ghcr.io/openclaw/openclaw:2026.3.12
     # - ghcr.io/waylonwang/openclaw:analysis-only-analyze-code
-    - ghcr.io/volcengine/openviking:v0.2.7    
-    - docker.litellm.ai/berriai/litellm:main-stable
-    - ghcr.io/comet-ml/opik/opik-frontend:1.1.10.40-4507
+    # - ghcr.io/volcengine/openviking:v0.2.7    
+    # - docker.litellm.ai/berriai/litellm:main-stable
+    - ghcr.io/comet-ml/opik/opik-frontend:1.10.40-4507
     - ghcr.io/comet-ml/opik/opik-backend:1.10.40-4507
     - ghcr.io/comet-ml/opik/opik-python-backend:1.10.40-4507
     - library/clickhouse:26.2.4.23
