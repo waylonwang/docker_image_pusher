@@ -103,7 +103,8 @@ specify-images:
     # - langfuse/langfuse:3.158.0
     # - langfuse/langfuse-worker:3.158.0
     # - quay.io/minio/aistor/minio:RELEASE.2026-03-12T15-15-27Z
-    - vaultwarden/server:1.35.4
+    # - vaultwarden/server:1.35.4
+    - couchdb:3.5.1
 
   
 
