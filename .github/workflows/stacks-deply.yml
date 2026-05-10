@@ -127,31 +127,51 @@ jobs:
             echo "============================================================================="
             echo "处理镜像: $image"
 
-            # 解析镜像名称（使用更简洁的方式）
-            if [[ "$image" =~ ^([^/]+)/(.*)$ ]]; then
-                registry="${BASH_REMATCH[1]}"
-                remainder="${BASH_REMATCH[2]}"
+            # 解析镜像名称 - 基于路径层级判断格式
+            # 统计"/"的数量来判断镜像格式类型
+            slash_count=$(echo "$image" | grep -o '/' | wc -l)
 
-                if [[ "$remainder" =~ ^([^/]+)/(.*)$ ]]; then
-                    namespace="${BASH_REMATCH[1]}"
-                    repo_and_tag="${BASH_REMATCH[2]}"
-                else
-                    namespace=""
-                    repo_and_tag="$remainder"
-                fi
+            registry=""
+            namespace=""
+            repo_and_tag=""
 
-                if [[ "$repo_and_tag" =~ ^([^:]+):?(.*)$ ]]; then
-                    repo="${BASH_REMATCH[1]}"
-                    tag="${BASH_REMATCH[2]:-latest}"
-                else
-                    repo="$repo_and_tag"
-                    tag="latest"
-                fi
+            case $slash_count in
+                0)
+                    # 格式: repo:tag (无namespace，Docker Hub官方镜像)
+                    # 例如: nginx:latest, postgres:14.7
+                    registry="docker.io"
+                    namespace="library"
+                    repo_and_tag="$image"
+                    ;;
+                1)
+                    # 格式: namespace/repo:tag (Docker Hub标准格式)
+                    # 例如: vaultwarden/server:1.36.0, grafana/grafana:11.0.0
+                    registry="docker.io"
+                    namespace=$(echo "$image" | cut -d'/' -f1)
+                    repo_and_tag=$(echo "$image" | cut -d'/' -f2)
+                    ;;
+                2)
+                    # 格式: registry/namespace/repo:tag (完整格式)
+                    # 例如: registry.cloudvalley.site:4/vaultwarden/server:1.32.0
+                    registry=$(echo "$image" | cut -d'/' -f1)
+                    namespace=$(echo "$image" | cut -d'/' -f2)
+                    repo_and_tag=$(echo "$image" | cut -d'/' -f3)
+                    ;;
+                *)
+                    echo "❌ 无法解析镜像名称: $image (路径层级过多)"
+                    failed_count=$((failed_count + 1))
+                    failed_images+=("$image")
+                    continue
+                    ;;
+            esac
+
+            # 解析repo和tag
+            if echo "$repo_and_tag" | grep -q ':'; then
+                repo=$(echo "$repo_and_tag" | cut -d':' -f1)
+                tag=$(echo "$repo_and_tag" | cut -d':' -f2)
             else
-                echo "❌ 无法解析镜像名称: $image"
-                failed_count=$((failed_count + 1))
-                failed_images+=("$image")
-                continue
+                repo="$repo_and_tag"
+                tag="latest"
             fi
 
             echo "解析出的注册表: $registry"
@@ -160,7 +180,8 @@ jobs:
             echo "解析出的标签: $tag"
             echo "----------------------------------------------------"
 
-            target_image="$MY_REGISTRY/${namespace:+$namespace/}$repo:$tag"
+            # 构造目标镜像 - 保持namespace路径
+            target_image="$MY_REGISTRY/$namespace/$repo:$tag"
             echo "目标镜像: $target_image"
             echo "----------------------------------------------------"
 
