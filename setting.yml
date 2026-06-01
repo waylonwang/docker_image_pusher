@@ -106,8 +106,8 @@ specify-images:
     # - vaultwarden/server:1.36.0
     # - library/couchdb:3.5.1
     # - ghcr.io/umputun/stash:v0.19.0
-    - gitea/gitea:1.26.2
-    - gitea/act_runner:0.6.1
+    # - gitea/gitea:1.26.2
+    - gitea/runner:1.0.7
 
   
 
