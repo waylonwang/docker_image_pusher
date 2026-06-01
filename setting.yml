@@ -108,7 +108,8 @@ specify-images:
     # - ghcr.io/umputun/stash:v0.19.0
     # - gitea/gitea:1.26.2
     # - gitea/runner:1.0.7
-    - ghcr.io/catthehacker/ubuntu:runner-24.04-20260529
+    # - ghcr.io/catthehacker/ubuntu:runner-24.04-20260529
+    - docker.gitea.com/runner-images:ubuntu-latest
 
   
 
