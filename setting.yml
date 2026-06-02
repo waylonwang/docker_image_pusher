@@ -109,7 +109,9 @@ specify-images:
     # - gitea/gitea:1.26.2
     # - gitea/runner:1.0.7
     # - ghcr.io/catthehacker/ubuntu:runner-24.04-20260529
-    - docker.gitea.com/runner-images:ubuntu-latest
+    # - docker.gitea.com/runner-images:ubuntu-latest
+    - oven/bun:alpine
+    - caddy:alpine
 
   
 
