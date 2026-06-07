@@ -112,7 +112,8 @@ specify-images:
     # - docker.gitea.com/runner-images:ubuntu-latest
     # - oven/bun:alpine
     # - caddy:alpine
-    - oven/bun:1
+    # - oven/bun:1
+    - containrrr/watchtower:1.7.1
 
   
 
