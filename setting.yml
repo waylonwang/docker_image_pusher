@@ -113,7 +113,8 @@ specify-images:
     # - oven/bun:alpine
     # - caddy:alpine
     # - oven/bun:1
-    - containrrr/watchtower:1.7.1
+    # - containrrr/watchtower:1.7.1
+    - nickfedor/watchtower:1.17.2
 
   
 
