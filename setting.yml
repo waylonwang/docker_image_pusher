@@ -114,7 +114,8 @@ specify-images:
     # - caddy:alpine
     # - oven/bun:1
     # - containrrr/watchtower:1.7.1
-    - nickfedor/watchtower:1.17.2
+    # - nickfedor/watchtower:1.17.2
+      - rustdesk/rustdesk-server:1.1.16    
 
   
 
